@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "severity": "High",
+    "category": "Reliability",
+    "filePath": "src/index.ts",
+    "lineRange": "207-234",
+    "rootCause": "The loop did not wrap fetch(url) in a try/catch, causing the script to crash immediately on network errors (e.g. timeout, DNS resolution failure) instead of retrying.",
+    "impact": "If a network failure occurs, the entire scraping job crashes, discarding all progress.",
+    "reproductionSteps": "Turn off network and run scraping, or mock fetch to throw an error. Observe the app crashing.",
+    "patchApplied": "Wrapped the fetch and response parsing logic in a try/catch block to properly retry on network errors.",
+    "testsAddedOrUpdated": "\"Fetch retry loop recovers after intermittent 500 error\" test was updated to throw a simulated network error and verify retry logic.",
+    "verificationResult": "Test passes, retry occurs exactly 3 times before returning success.",
+    "remainingRisk": "Low"
+  }
+]

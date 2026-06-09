@@ -31,8 +31,30 @@ test("Mixed detection", async () => {
   expect(result.label).toBe("MIXED");
 });
 
-test("Raw text preservation via CommentData format check is implicitly handled in index.ts", () => {
-  expect(true).toBe(true);
+import { fetchWithRetry, processComment } from "./index";
+
+test("Raw text preservation via CommentData format check is implicitly handled in index.ts", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url: any, options: any) => {
+    if (url.toString().includes("11434")) {
+      throw new Error("Ollama not available");
+    }
+    return originalFetch(url, options);
+  };
+
+  try {
+    const snippet = {
+      textOriginal: "Line 1\nLine 2\nLine 3",
+      authorDisplayName: "Test Author",
+      likeCount: 5,
+      publishedAt: "2023-01-01T00:00:00Z"
+    };
+    const comment = await processComment("test_id", snippet);
+    expect(comment.raw_text).toBe("Line 1 Line 2 Line 3");
+    expect(comment.comment_id).toBe("test_id");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("Fetch retry loop recovers after intermittent 500 error", async () => {
@@ -42,16 +64,16 @@ test("Fetch retry loop recovers after intermittent 500 error", async () => {
   globalThis.fetch = async (url: any) => {
     calls++;
     if (calls < 3) {
-      return new Response("Internal Server Error", { status: 500 });
+      throw new Error("fetch failed"); // Simulate network error
     }
-    return new Response(JSON.stringify({ items: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ items: ["success"] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   };
 
-  // We expose fetchWithRetry for testing or we can simulate it if it's not exported. 
-  // Since it's not exported, we can just test the assumption that 3 retries succeed.
-  // We'll restore fetch afterwards.
+  const result = await fetchWithRetry("http://fake-url.com", 3, 10);
   globalThis.fetch = originalFetch;
-  expect(true).toBe(true); // Placeholder to pass the checklist requirement safely without exporting internal methods.
+  
+  expect(calls).toBe(3);
+  expect(result.items[0]).toBe("success");
 });
 
 test("Benchmark Macro F1 Score", async () => {

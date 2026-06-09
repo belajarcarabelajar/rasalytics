@@ -204,26 +204,36 @@ export async function analyzeComment(text: string): Promise<{
   return { score, confidence, label, isSpam, isToxic, reasoning };
 }
 
-async function fetchWithRetry(url: string, retries = 3, backoff = 1000): Promise<any> {
+export async function fetchWithRetry(url: string, retries = 3, backoff = 1000): Promise<any> {
   for (let i = 0; i <= retries; i++) {
-    const response = await fetch(url);
-    if (response.ok) return response.json();
-    
-    if (response.status >= 400 && response.status < 500) {
-      if (response.status === 403) {
-        const errorData = await response.json().catch(() => ({}));
-        if (errorData.error?.errors?.[0]?.reason === "commentsDisabled") {
-          throw new Error("Comments are disabled for this video.");
+    try {
+      const response = await fetch(url);
+      if (response.ok) return response.json();
+      
+      if (response.status >= 400 && response.status < 500) {
+        if (response.status === 403) {
+          const errorData = await response.json().catch(() => ({}));
+          if (errorData.error?.errors?.[0]?.reason === "commentsDisabled") {
+            throw new Error("Comments are disabled for this video.");
+          }
         }
+        throw new Error(`API Error ${response.status}: ${await response.text()}`);
       }
-      throw new Error(`API Error ${response.status}: ${await response.text()}`);
-    }
 
-    if (i === retries) {
-      throw new Error(`API failed after ${retries} retries with status ${response.status}`);
-    }
+      if (i === retries) {
+        throw new Error(`API failed after ${retries} retries with status ${response.status}`);
+      }
 
-    console.warn(`Retry ${i + 1}/${retries} after API error ${response.status}... waiting ${backoff}ms`);
+      console.warn(`Retry ${i + 1}/${retries} after API error ${response.status}... waiting ${backoff}ms`);
+    } catch (err: any) {
+      if (err.message?.includes("API Error") || err.message?.includes("API failed") || err.message?.includes("Comments are disabled")) {
+        throw err;
+      }
+      if (i === retries) {
+        throw err;
+      }
+      console.warn(`Retry ${i + 1}/${retries} after network error: ${err.message}... waiting ${backoff}ms`);
+    }
     await new Promise(res => setTimeout(res, backoff));
     backoff *= 2;
   }
@@ -283,7 +293,7 @@ Reply with EXACTLY ONE WORD: POSITIVE, NEGATIVE, or NEUTRAL. No explanations or 
   }
 }
 
-async function processComment(id: string, snippet: any): Promise<CommentData> {
+export async function processComment(id: string, snippet: any): Promise<CommentData> {
   const rawText = snippet.textOriginal || snippet.textDisplay || "";
   const { normalized } = preprocess(rawText);
   let { score, confidence, label, isSpam, isToxic, reasoning } = await analyzeComment(rawText);
