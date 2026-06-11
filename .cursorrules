@@ -1,0 +1,9 @@
+# Project Skills and Rules
+
+This repository uses a Single Source of Truth (SSOT) for agent skills to maintain consistency across different AI tools (Cursor, Cline, Claude Code, Antigravity, etc.).
+
+Please refer to the skills directory for specific instructions based on the task you are performing:
+- **youtube-comments-scraper**: `.agents/skills/youtube-comments-scraper/SKILL.md`
+- **youtube-sentiment-analysis**: `.agents/skills/youtube-sentiment-analysis/SKILL.md`
+
+Always read the relevant `SKILL.md` before proceeding with modifications to those components.
