@@ -2,7 +2,7 @@ import { parseArgs } from "util";
 import Sentiment from "sentiment";
 import { writeFileSync, existsSync, unlinkSync } from "fs";
 import { emojiEmotion } from "emoji-emotion";
-import { idLexicon, toxicLexicon, slangDict } from "./lexicons";
+import { idLexicon, toxicLexicon, slangDict, spamKeywords } from "./lexicons";
 import { pipeline, env } from "@xenova/transformers";
 import { franc } from "franc-min";
 import { Database } from "bun:sqlite";
@@ -28,6 +28,9 @@ const { values } = parseArgs({
 });
 
 const API_KEY = process.env.YOUTUBE_API_KEY;
+const OLLAMA_API_URL = process.env.OLLAMA_API_URL || "http://127.0.0.1:11434/api/generate";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen2.5:1.5b";
+const MAX_REPLY_PAGES = 5;
 
 const emojiScores: Record<string, number> = {};
 emojiEmotion.forEach((e: any) => {
@@ -106,7 +109,6 @@ export async function analyzeComment(text: string): Promise<{
   const { normalized, urls } = preprocess(text);
   
   let isSpam = urls.length > 0;
-  const spamKeywords = ["subs", "cek channel", "bio saya", "subscribe", "mampir", "follback", "profilku"];
   for (const kw of spamKeywords) {
     if (normalized.includes(kw)) isSpam = true;
   }
@@ -296,11 +298,11 @@ Determine the actual sentiment of this comment. It may contain sarcasm, slang, o
 Reply with EXACTLY ONE WORD: POSITIVE, NEGATIVE, or NEUTRAL. No explanations or punctuation.`;
 
   try {
-    const res = await fetch("http://127.0.0.1:11434/api/generate", {
+    const res = await fetch(OLLAMA_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "qwen2.5:1.5b",
+        model: OLLAMA_MODEL,
         prompt: prompt,
         stream: false,
         options: { temperature: 0.0, num_predict: 5 }
@@ -438,7 +440,7 @@ async function run() {
         if (item.snippet.totalReplyCount > 0) {
           let replyPageToken: string | undefined = undefined;
           let replyCount = 0;
-          while (replyCount < 5) {
+          while (replyCount < MAX_REPLY_PAGES) {
             const replyData = await fetchReplies(item.id, API_KEY!, replyPageToken);
             const replies = replyData.items || [];
             for (const reply of replies) {

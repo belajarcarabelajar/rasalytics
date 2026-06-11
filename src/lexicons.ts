@@ -39,3 +39,7 @@ export const slangDict: Record<string, string> = {
   "ga": "tidak",
   "ngga": "tidak"
 };
+
+export const spamKeywords: string[] = [
+  "subs", "cek channel", "bio saya", "subscribe", "mampir", "follback", "profilku"
+];
