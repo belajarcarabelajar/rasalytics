@@ -215,13 +215,16 @@ export async function fetchWithRetry(url: string, retries = 3, backoff = 1000): 
       if (response.ok) return response.json();
       
       if (response.status >= 400 && response.status < 500) {
+        const errorText = await response.text();
         if (response.status === 403) {
-          const errorData = await response.json().catch(() => ({}));
+          let errorData: any = {};
+          try { errorData = JSON.parse(errorText); } catch(e) {}
+          
           if (errorData.error?.errors?.[0]?.reason === "commentsDisabled") {
             throw new Error("Comments are disabled for this video.");
           }
         }
-        throw new Error(`API Error ${response.status}: ${await response.text()}`);
+        throw new Error(`API Error ${response.status}: ${errorText}`);
       }
 
       if (i === retries) {
@@ -383,7 +386,11 @@ async function run() {
       if (!pageToken) break;
       pageCount++;
     }
+  } catch (err: any) {
+    console.error(`Execution stopped: ${err.message}`);
+  }
 
+  try {
     if (allComments.length > 0) {
       let positive = 0, negative = 0, neutral = 0, mixed = 0, spam = 0, toxic = 0;
       const positiveComments: CommentData[] = [];
@@ -449,9 +456,8 @@ async function run() {
       console.log(`=======================`);
       console.log(`Full markdown report saved to: ${outputPath}`);
     }
-
   } catch (err: any) {
-    console.error(`Execution failed: ${err.message}`);
+    console.error(`Error during report generation: ${err.message}`);
   }
 }
 
