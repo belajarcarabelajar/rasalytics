@@ -583,9 +583,40 @@ async function run() {
 
 
 
+       // Fetch Video Details
+       let videoTitle = "Unknown Title";
+       let channelName = "Unknown Channel";
+       let viewCount = "0";
+       let likeCount = "0";
+       let commentCount = "0";
+       
+       try {
+         const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${VIDEO_ID}&key=${API_KEY}`);
+         if (vRes.ok) {
+           const vData = await vRes.json();
+           if (vData.items && vData.items.length > 0) {
+             const vInfo = vData.items[0];
+             videoTitle = vInfo.snippet.title;
+             channelName = vInfo.snippet.channelTitle;
+             viewCount = parseInt(vInfo.statistics.viewCount || "0").toLocaleString();
+             likeCount = parseInt(vInfo.statistics.likeCount || "0").toLocaleString();
+             commentCount = parseInt(vInfo.statistics.commentCount || "0").toLocaleString();
+           }
+         }
+       } catch(e) {
+         console.error("Failed to fetch video details:", e);
+       }
+
        const markdownLines: string[] = [
         `# YouTube Comments Analysis: ${VIDEO_ID}`,
         `*Model Version: ${MODEL_VERSION}*`,
+        ``,
+        `## 🎥 Video Details`,
+        `- **Title:** ${videoTitle}`,
+        `- **Channel:** ${channelName}`,
+        `- **Views:** ${viewCount}`,
+        `- **Likes:** ${likeCount}`,
+        `- **Total Comments (API):** ${commentCount}`,
         ``,
         `## 📊 Summary & Actionable Insights`,
         ``,
