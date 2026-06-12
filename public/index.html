@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rasalytics | Raw YouTube Intelligence</title>
+  <meta name="description" content="Unfiltered sentiment analysis for YouTube comments.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="noise-overlay"></div>
+  
+  <div class="layout-grid">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1 class="logo-text">RASA<br>LYTICS_</h1>
+        <div class="status-indicator">
+          <span class="pulse"></span> EDGE ACTIVE
+        </div>
+      </div>
+      
+      <div class="control-panel">
+        <label for="videoInput" class="panel-label">TARGET VIDEO ID</label>
+        <input type="text" id="videoInput" class="brutal-input" placeholder="Paste YouTube URL or ID..." />
+        
+        <label for="pagesInput" class="panel-label" style="margin-top: 1.5rem;">SCAN DEPTH (PAGES)</label>
+        <input type="range" id="pagesInput" class="brutal-slider" min="1" max="11" value="2" />
+        <div class="slider-val" id="pagesVal">2 Pages</div>
+        
+        <button id="analyzeVideoBtn" class="brutal-btn">
+          <span class="btn-text">INITIALIZE SCAN</span>
+        </button>
+        <div id="errorContainer" class="error-box" style="display: none;"></div>
+      </div>
+      
+      <div class="meta-info">
+        <p>Lexicon-based statistical inference engine.</p>
+        <p class="smallcaps">NO GENERATIVE AI.</p>
+      </div>
+    </aside>
+    
+    <main class="content-area">
+      <!-- Empty State -->
+      <div id="emptyState" class="empty-state">
+        <div class="crosshair"></div>
+        <h2>AWAITING TARGET</h2>
+        <p>Provide a valid YouTube Video ID to begin the sentiment extraction sequence.</p>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loadingState" class="loading-state" style="display: none;">
+        <div class="loader-bar"></div>
+        <h2>EXTRACTING DATA...</h2>
+      </div>
+
+      <!-- Results Section -->
+      <div class="results-section" id="videoResultsSection" style="display: none;">
+        <div class="video-meta-card">
+          <div class="meta-header">TARGET ACQUIRED</div>
+          <h2 id="vidTitle" class="video-title">--</h2>
+          <div class="video-stats">
+            <div class="stat-pill">CHANNEL: <span id="vidChannel">--</span></div>
+            <div class="stat-pill">VIEWS: <span id="vidViews">0</span></div>
+            <div class="stat-pill">LIKES: <span id="vidLikes">0</span></div>
+            <div class="stat-pill">COMMENTS: <span id="vidComments">0</span></div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- Total Comments -->
+          <div class="dash-card total-card">
+            <h3 class="dash-title">TOTAL ANALYZED</h3>
+            <div class="dash-val" id="resVidTotal">0</div>
+          </div>
+          
+          <!-- Toxicity / Spam -->
+          <div class="dash-card warning-card">
+            <h3 class="dash-title">TOXICITY</h3>
+            <div class="dash-val" id="resVidToxic">0</div>
+          </div>
+          <div class="dash-card warning-card">
+            <h3 class="dash-title">SPAM FLAG</h3>
+            <div class="dash-val" id="resVidSpam">0</div>
+          </div>
+
+          <!-- Sentiment Distribution -->
+          <div class="dash-card sentiment-dist">
+            <h3 class="dash-title">SENTIMENT DISTRIBUTION</h3>
+            <div class="distribution-bars">
+              <div class="dist-row">
+                <span class="dist-label pos">POS</span>
+                <div class="bar-track"><div class="bar-fill pos-bg" id="barPos"></div></div>
+                <span class="dist-count" id="resVidPos">0</span>
+              </div>
+              <div class="dist-row">
+                <span class="dist-label neu">NEU</span>
+                <div class="bar-track"><div class="bar-fill neu-bg" id="barNeu"></div></div>
+                <span class="dist-count" id="resVidNeu">0</span>
+              </div>
+              <div class="dist-row">
+                <span class="dist-label mixed">MIX</span>
+                <div class="bar-track"><div class="bar-fill mixed-bg" id="barMix"></div></div>
+                <span class="dist-count" id="resVidMix">0</span>
+              </div>
+              <div class="dist-row">
+                <span class="dist-label neg">NEG</span>
+                <div class="bar-track"><div class="bar-fill neg-bg" id="barNeg"></div></div>
+                <span class="dist-count" id="resVidNeg">0</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Comments Snippets -->
+        <div class="top-comments-section" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+          <div>
+            <h3 class="section-heading">TOP POSITIVE</h3>
+            <div id="commentsListPos" class="comments-list"></div>
+          </div>
+          <div>
+            <h3 class="section-heading">TOP NEGATIVE</h3>
+            <div id="commentsListNeg" class="comments-list"></div>
+          </div>
+        </div>
+
+        <div class="time-series-section" style="margin-top: 3rem;">
+          <h3 class="section-heading">SENTIMENT OVER TIME</h3>
+          <div id="timeSeriesChartContainer" class="dash-card" style="height: 300px; padding: 1rem; display: flex; align-items: center; justify-content: center;">
+             <!-- Image will be embedded here -->
+             <canvas id="tempChartCanvas" style="display:none; width: 600px; height: 300px;"></canvas>
+          </div>
+        </div>
+
+        <div class="forensics-section" style="margin-top: 3rem;">
+          <h3 class="section-heading">BUZZER FORENSICS</h3>
+          <div class="dash-card warning-card" style="margin-bottom: 1rem;">
+             <h3 class="dash-title">TOTAL BUZZER/COPAS</h3>
+             <div class="dash-val" id="resVidBuzzer">0</div>
+          </div>
+          <div id="buzzerRingsList" class="comments-list"></div>
+        </div>
+
+        <div class="export-section" style="margin-top: 3rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+          <button id="exportCsvBtn" class="brutal-btn" style="width: auto;">EXPORT CSV</button>
+          <button id="exportReportBtn" class="brutal-btn" style="width: auto;">EXPORT REPORT</button>
+        </div>
+
+      </div>
+    </main>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.v8.js?v=9"></script>
+</body>
+</html>
