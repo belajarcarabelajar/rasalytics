@@ -37,7 +37,7 @@ window.RasalyticsExportHelpers = {
     if (data.topPositive && data.topPositive.length > 0) {
       md += `## Top Positive Comments\n`;
       data.topPositive.forEach(c => {
-        md += `> **@${c.author}** [${c.sentiment}] (${c.confidence}%)\n`;
+        md += `> **${c.author.startsWith('@') ? '' : '@'}${c.author}** [${c.sentiment}] (${c.confidence}%)\n`;
         md += `> ${c.text.replace(/\n/g, '\n> ')}\n\n`;
       });
     }
@@ -45,7 +45,7 @@ window.RasalyticsExportHelpers = {
     if (data.topNegative && data.topNegative.length > 0) {
       md += `## Top Negative Comments\n`;
       data.topNegative.forEach(c => {
-        md += `> **@${c.author}** [${c.sentiment}] (${c.confidence}%)\n`;
+        md += `> **${c.author.startsWith('@') ? '' : '@'}${c.author}** [${c.sentiment}] (${c.confidence}%)\n`;
         md += `> ${c.text.replace(/\n/g, '\n> ')}\n\n`;
       });
     }

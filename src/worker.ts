@@ -32,8 +32,15 @@ export default {
     const url = new URL(request.url);
     
     const origin = request.headers.get("Origin") || "";
-    const allowedOrigins = ["http://localhost:8787", "http://127.0.0.1:8787", "http://localhost:3000", "http://127.0.0.1:3000"];
-    const allowOrigin = allowedOrigins.includes(origin) ? origin : "https://rasalytics-kurniawaniwan7906.pages.dev";
+    const allowedOrigins = [
+      "http://localhost:8787", "http://127.0.0.1:8787", 
+      "http://localhost:3000", "http://127.0.0.1:3000",
+      "https://rasalytics.belajarcarabelajar.com"
+    ];
+    let allowOrigin = "https://rasalytics.belajarcarabelajar.com";
+    if (allowedOrigins.includes(origin) || origin.endsWith(".pages.dev")) {
+      allowOrigin = origin;
+    }
     
     const corsHeaders = {
       "Access-Control-Allow-Origin": allowOrigin,
