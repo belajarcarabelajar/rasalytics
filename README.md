@@ -73,6 +73,37 @@ bun run setup:skills
 ```
 This will automatically configure `.cursorrules`, `.clinerules`, and the necessary `.agents` and `.claude` directories.
 
+## Cloudflare Website Deployment
+The project includes a deployable website version using **Cloudflare Pages** (frontend) and **Cloudflare Workers** (backend API). 
+**Note:** The Cloudflare API uses an *edge-safe* shared sentiment module that relies exclusively on deterministic lexicon-based and statistical checks (no heavy generative AI or Ollama dependencies) to ensure fast cold starts and security.
+
+### Environment Setup
+Update your `.env` (or set via `wrangler` and Cloudflare Dashboard):
+- **Local:** `YOUTUBE_API_KEY` for CLI.
+- **Worker (Backend):** No API keys required for the edge-safe sentiment API. 
+- **Pages (Frontend):** Set public variables like `VITE_API_URL` if building a complex frontend framework. The current vanilla HTML setup connects to the API automatically.
+
+### Manual Deployment Steps
+1. Login to Cloudflare:
+   ```bash
+   bunx wrangler login
+   ```
+2. Run the deployment script:
+   ```bash
+   bun run deploy:website
+   # or manually: bash scripts/deploy-website.sh
+   ```
+   
+This script will:
+- Validate `bun` and `wrangler` installation.
+- Deploy the Worker API (`rasalytics-api`) to Cloudflare Workers.
+- Deploy the static frontend to Cloudflare Pages (`rasalytics-web`).
+
+### Security Notes & Limitations
+- **ML-Only Limitation:** The Cloudflare Worker API does NOT use `@xenova/transformers` or `Ollama` generative AI due to edge limits and cold starts. It uses a lightweight, deterministic lexicon and rule-based approach.
+- Do NOT commit real secrets to the repository. Use `wrangler secret put <NAME>` for backend secrets.
+- `local_models/` and other offline artifacts are safely excluded from the website deployment.
+
 ## Usage
 Run the script by providing a YouTube Video ID. You can also specify the maximum number of comment pages to fetch (default is 5).
 

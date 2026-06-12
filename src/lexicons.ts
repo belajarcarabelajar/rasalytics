@@ -10,7 +10,13 @@ export const idLexicon: Record<string, number> = {
   inspirasi: 3, ilmunya: 2, semangat: 3, clickbait: -4, informatif: 3,
   gak_jelas: -3, gak_lucu: -3, gak_sesuai: -3, tidak_jelas: -3, tidak_lucu: -3, tidak_sesuai: -3,
   gak_ada: -2, "buang-buang": -3, terburuk: -5, buang: -2, waktu: 0,
-  garing: -2, ngeselin: -3
+  garing: -2, ngeselin: -3, luar_biasa: 5, keren_parah: 5,
+  tidak_bagus: -3, tidak_baik: -2, tidak_mantap: -3, tidak_keren: -3, tidak_suka: -3,
+  tidak_menarik: -3, tidak_kocak: -2, tidak_seru: -3, tidak_membantu: -3,
+  tidak_paham: -2, tidak_ngerti: -2, tidak_jelek: 3, tidak_buruk: 3, tidak_kecewa: 2,
+  membosankan: -3, mahal: -2, kecil: -1, tunggu: 2, menginspirasi: 3, pemula: 1, boong: -3, 
+  rombeng: -3, turu: -2, sayang: -1, sayangnya: -2,
+  wonderful: 3, terrible: -3
 };
 
 export const toxicLexicon: Set<string> = new Set([

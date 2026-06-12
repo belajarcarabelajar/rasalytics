@@ -2,9 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
   <title>Rasalytics | Raw YouTube Intelligence</title>
-  <meta name="description" content="Unfiltered sentiment analysis for YouTube comments.">
+  <meta name="description" content="Unfiltered sentiment analysis for YouTube comments using lexicon-based statistical inference. No generative AI.">
+  <link rel="canonical" href="https://rasalytics.belajarcarabelajar.com/">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://rasalytics.belajarcarabelajar.com/">
+  <meta property="og:title" content="Rasalytics | Raw YouTube Intelligence">
+  <meta property="og:description" content="Unfiltered sentiment analysis for YouTube comments using lexicon-based statistical inference. No generative AI.">
+  <meta property="og:image" content="https://rasalytics.belajarcarabelajar.com/og-image.png">
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://rasalytics.belajarcarabelajar.com/">
+  <meta name="twitter:title" content="Rasalytics | Raw YouTube Intelligence">
+  <meta name="twitter:description" content="Unfiltered sentiment analysis for YouTube comments using lexicon-based statistical inference. No generative AI.">
+  <meta name="twitter:image" content="https://rasalytics.belajarcarabelajar.com/og-image.png">
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Rasalytics",
+    "url": "https://rasalytics.belajarcarabelajar.com",
+    "description": "Unfiltered sentiment analysis for YouTube comments.",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "All"
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -16,25 +42,25 @@
   <div class="layout-grid">
     <aside class="sidebar">
       <div class="brand">
-        <h1 class="logo-text">RASA<br>LYTICS_</h1>
+        <h1 class="logo-text">RASALYTICS_</h1>
         <div class="status-indicator">
           <span class="pulse"></span> EDGE ACTIVE
         </div>
       </div>
       
-      <div class="control-panel">
+      <form id="controlForm" class="control-panel">
         <label for="videoInput" class="panel-label">TARGET VIDEO ID</label>
-        <input type="text" id="videoInput" class="brutal-input" placeholder="Paste YouTube URL or ID..." />
+        <input type="url" inputmode="url" autocorrect="off" autocapitalize="none" id="videoInput" class="brutal-input" placeholder="Paste YouTube URL or ID..." aria-required="true" />
         
         <label for="pagesInput" class="panel-label" style="margin-top: 1.5rem;">SCAN DEPTH (PAGES)</label>
         <input type="range" id="pagesInput" class="brutal-slider" min="1" max="11" value="2" />
         <div class="slider-val" id="pagesVal">2 Pages</div>
         
-        <button id="analyzeVideoBtn" class="brutal-btn">
+        <button type="submit" id="analyzeVideoBtn" class="brutal-btn">
           <span class="btn-text">INITIALIZE SCAN</span>
         </button>
         <div id="errorContainer" class="error-box" style="display: none;"></div>
-      </div>
+      </form>
       
       <div class="meta-info">
         <p>Lexicon-based statistical inference engine.</p>
@@ -89,29 +115,30 @@
           <!-- Sentiment Distribution -->
           <div class="dash-card sentiment-dist">
             <h3 class="dash-title">SENTIMENT DISTRIBUTION</h3>
-            <div class="distribution-bars">
-              <div class="dist-row">
-                <span class="dist-label pos">POS</span>
-                <div class="bar-track"><div class="bar-fill pos-bg" id="barPos"></div></div>
-                <span class="dist-count" id="resVidPos">0</span>
+              <div class="distribution-bars" style="display: none;">
+                <div class="dist-row">
+                  <span class="dist-label pos">POS</span>
+                  <div class="bar-track"><div class="bar-fill pos-bg" id="barPos"></div></div>
+                  <span class="dist-count" id="resVidPos">0</span>
+                </div>
+                <div class="dist-row">
+                  <span class="dist-label neu">NEU</span>
+                  <div class="bar-track"><div class="bar-fill neu-bg" id="barNeu"></div></div>
+                  <span class="dist-count" id="resVidNeu">0</span>
+                </div>
+                <div class="dist-row">
+                  <span class="dist-label mixed">MIX</span>
+                  <div class="bar-track"><div class="bar-fill mixed-bg" id="barMix"></div></div>
+                  <span class="dist-count" id="resVidMix">0</span>
+                </div>
+                <div class="dist-row">
+                  <span class="dist-label neg">NEG</span>
+                  <div class="bar-track"><div class="bar-fill neg-bg" id="barNeg"></div></div>
+                  <span class="dist-count" id="resVidNeg">0</span>
+                </div>
               </div>
-              <div class="dist-row">
-                <span class="dist-label neu">NEU</span>
-                <div class="bar-track"><div class="bar-fill neu-bg" id="barNeu"></div></div>
-                <span class="dist-count" id="resVidNeu">0</span>
-              </div>
-              <div class="dist-row">
-                <span class="dist-label mixed">MIX</span>
-                <div class="bar-track"><div class="bar-fill mixed-bg" id="barMix"></div></div>
-                <span class="dist-count" id="resVidMix">0</span>
-              </div>
-              <div class="dist-row">
-                <span class="dist-label neg">NEG</span>
-                <div class="bar-track"><div class="bar-fill neg-bg" id="barNeg"></div></div>
-                <span class="dist-count" id="resVidNeg">0</span>
-              </div>
+              <canvas id="sentimentPieChart" style="margin-top: 1rem; width: 100%; max-height: 200px;"></canvas>
             </div>
-          </div>
         </div>
 
         <!-- Top Comments Snippets -->
@@ -130,7 +157,7 @@
           <h3 class="section-heading">SENTIMENT OVER TIME</h3>
           <div id="timeSeriesChartContainer" class="dash-card" style="height: 300px; padding: 1rem; display: flex; align-items: center; justify-content: center;">
              <!-- Image will be embedded here -->
-             <canvas id="tempChartCanvas" style="display:none; width: 600px; height: 300px;"></canvas>
+             <canvas id="tempChartCanvas" style="display:none; max-width: 100%; height: auto;"></canvas>
           </div>
         </div>
 
@@ -143,6 +170,13 @@
           <div id="buzzerRingsList" class="comments-list"></div>
         </div>
 
+        <div class="wordcloud-section" style="margin-top: 3rem;">
+          <h3 class="section-heading">WORD CLOUD (TOP THEMES)</h3>
+          <div class="dash-card" style="padding: 1rem; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #111;">
+             <canvas id="wordcloudCanvas" width="800" height="400" style="max-width: 100%; height: auto;" aria-label="Word cloud visualization of top themes" role="img"></canvas>
+          </div>
+        </div>
+
         <div class="export-section" style="margin-top: 3rem; display: flex; gap: 1rem; flex-wrap: wrap;">
           <button id="exportCsvBtn" class="brutal-btn" style="width: auto;">EXPORT CSV</button>
           <button id="exportReportBtn" class="brutal-btn" style="width: auto;">EXPORT REPORT</button>
@@ -152,7 +186,8 @@
     </main>
   </div>
   
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="app.v8.js?v=9"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js" defer></script>
+  <script src="app.v8.js?v=11" defer></script>
 </body>
 </html>

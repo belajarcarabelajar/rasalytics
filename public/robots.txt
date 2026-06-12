@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://rasalytics.belajarcarabelajar.com/sitemap.xml

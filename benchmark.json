@@ -1,102 +1,450 @@
 [
-  { "text": "Wah keren banget videonya, mantap!", "expected": "POSITIVE" },
-  { "text": "Sangat membantu, makasih ya bang", "expected": "POSITIVE" },
-  { "text": "Top markotop! Kualitas suaranya jernih.", "expected": "POSITIVE" },
-  { "text": "Aku suka cara penjelasannya, gampang dimengerti.", "expected": "POSITIVE" },
-  { "text": "Video ini ngasih insight baru. Keren bgt sumpah.", "expected": "POSITIVE" },
-  { "text": "Luar biasa, ditunggu konten selanjutnya!", "expected": "POSITIVE" },
-  { "text": "Terbaik emang channel ini", "expected": "POSITIVE" },
-  { "text": "Gila, ini sih masterpiece!", "expected": "POSITIVE" },
-  { "text": "Lucu banget ngakak guling-guling 😂", "expected": "POSITIVE" },
-  { "text": "Keren parah! ❤️", "expected": "POSITIVE" },
-  { "text": "Bagus banget sampe pengen muntah", "expected": "MIXED" },
-  { "text": "Kualitas bagus tapi harganya mahal banget", "expected": "MIXED" },
-  { "text": "Awalnya mikir ini jelek, ternyata mantap juga", "expected": "MIXED" },
-  { "text": "Suka sih sama videonya, tapi kenapa suaranya kecil amat", "expected": "MIXED" },
-  { "text": "Keren tapi ngeselin", "expected": "MIXED" },
-  { "text": "Ini jelek parah, hoax dan bohong", "expected": "NEGATIVE" },
-  { "text": "Nyesel nonton, buang-buang waktu", "expected": "NEGATIVE" },
-  { "text": "Videonya burik, suaranya cempreng", "expected": "NEGATIVE" },
-  { "text": "Kecewa banget sama kualitasnya", "expected": "NEGATIVE" },
-  { "text": "Membosankan. Jangan ditonton.", "expected": "NEGATIVE" },
-  { "text": "Payah, gak sesuai ekspektasi", "expected": "NEGATIVE" },
-  { "text": "Konten sampah!", "expected": "NEGATIVE" },
-  { "text": "Benci banget liat mukanya", "expected": "NEGATIVE" },
-  { "text": "Sangat buruk, gak ada manfaatnya", "expected": "NEGATIVE" },
-  { "text": "Gagal total, mending hapus aja videonya", "expected": "NEGATIVE" },
-  { "text": "Goblok lu, bikin video gak bener", "expected": "TOXIC" },
-  { "text": "Dasar anjing, penipu!", "expected": "TOXIC" },
-  { "text": "Tolol banget sih yang ngomong", "expected": "TOXIC" },
-  { "text": "Babi emang, clickbait doang isinya", "expected": "TOXIC" },
-  { "text": "Mati aja lu bangsat", "expected": "TOXIC" },
-  { "text": "Dapatkan uang 50 juta dalam sehari! Cek channel saya ya kak", "expected": "SPAM" },
-  { "text": "Yuk subs balik, aku udah subs kamu. http://spam.com", "expected": "SPAM" },
-  { "text": "Cek profilku untuk melihat video dewasa terbaru link.com", "expected": "SPAM" },
-  { "text": "Beli followers murah meriah hanya di sini: instagram.com", "expected": "SPAM" },
-  { "text": "Ayo buruan klik link ini untuk menang iphone 14 gratis! https://scam.net", "expected": "SPAM" },
-  { "text": "Saya sedang menonton video ini", "expected": "NEUTRAL" },
-  { "text": "Durasi videonya 10 menit", "expected": "NEUTRAL" },
-  { "text": "Dia memakai baju merah", "expected": "NEUTRAL" },
-  { "text": "Tadi jam 8 malam aku buka youtube", "expected": "NEUTRAL" },
-  { "text": "Lokasinya di jakarta ya?", "expected": "NEUTRAL" },
-  { "text": "Video ini diunggah tahun 2023", "expected": "NEUTRAL" },
-  { "text": "Berapa harganya bang?", "expected": "NEUTRAL" },
-  { "text": "Kamera apa yang dipake?", "expected": "NEUTRAL" },
-  { "text": "Hadir", "expected": "NEUTRAL" },
-  { "text": "Menyimak dari bali", "expected": "NEUTRAL" },
-  { "text": "Keren sih, tapi kurang panjang durasinya", "expected": "MIXED" },
-  { "text": "Bagus, tapi saya benci bagian akhirnya", "expected": "MIXED" },
-  { "text": "Mantap idenya, sayang eksekusinya gagal", "expected": "MIXED" },
-  { "text": "Suka dengan editingnya, tapi isinya bodoh", "expected": "MIXED" },
-  { "text": "Lucu tapi garing", "expected": "MIXED" },
-  { "text": "Bagus banget videonya kak!", "expected": "POSITIVE" },
-  { "text": "Informatif dan edukatif", "expected": "POSITIVE" },
-  { "text": "Sangat menginspirasi", "expected": "POSITIVE" },
-  { "text": "Terima kasih atas ilmunya", "expected": "POSITIVE" },
-  { "text": "Konten yang selalu aku tunggu", "expected": "POSITIVE" },
-  { "text": "Wah gila keren", "expected": "POSITIVE" },
-  { "text": "Saya suka sekali dengan gaya penyampaiannya", "expected": "POSITIVE" },
-  { "text": "Bikin semangat lagi nih", "expected": "POSITIVE" },
-  { "text": "Bagus bgtttt", "expected": "POSITIVE" },
-  { "text": "Luar biasa mas", "expected": "POSITIVE" },
-  { "text": "Tolong dong dibikin lebih jelek lagi", "expected": "NEGATIVE" },
-  { "text": "Ini apa sih maksudnya? Bingung", "expected": "NEGATIVE" },
-  { "text": "Gak jelas banget videonya", "expected": "NEGATIVE" },
-  { "text": "Terlalu bertele-tele dan membosankan", "expected": "NEGATIVE" },
-  { "text": "Males nontonnya kalau gini terus", "expected": "NEGATIVE" },
-  { "text": "Gak ada lucunya sama sekali", "expected": "NEGATIVE" },
-  { "text": "Sumpah ini video terburuk yang pernah kulihat", "expected": "NEGATIVE" },
-  { "text": "Kecewa berat", "expected": "NEGATIVE" },
-  { "text": "Norak banget gaya ngomongnya", "expected": "NEGATIVE" },
-  { "text": "Alay lu", "expected": "NEGATIVE" },
-  { "text": "Tolol", "expected": "TOXIC" },
-  { "text": "Dasar idiot", "expected": "TOXIC" },
-  { "text": "Ngentot lu bangsat", "expected": "TOXIC" },
-  { "text": "Goblok banget sumpah", "expected": "TOXIC" },
-  { "text": "Perek lu", "expected": "TOXIC" },
-  { "text": "Subs channel gw dong bang, gw pemula", "expected": "SPAM" },
-  { "text": "Mampir channel aku yukkk", "expected": "SPAM" },
-  { "text": "Cek channel aku ada hadiah buat kalian", "expected": "SPAM" },
-  { "text": "Halo kak, follback ig aku dong", "expected": "SPAM" },
-  { "text": "Cara cepat kaya cek bio saya", "expected": "SPAM" },
-  { "text": "Wah bagus", "expected": "POSITIVE" },
-  { "text": "Sangat jelek", "expected": "NEGATIVE" },
-  { "text": "Ini video tentang apa?", "expected": "NEUTRAL" },
-  { "text": "Saya nonton ini sambil makan", "expected": "NEUTRAL" },
-  { "text": "Mantap banget pokoknya", "expected": "POSITIVE" },
-  { "text": "Parah banget editingnya jelek", "expected": "NEGATIVE" },
-  { "text": "Cinta banget sama channel ini", "expected": "POSITIVE" },
-  { "text": "Benci banget sumpah", "expected": "NEGATIVE" },
-  { "text": "Hehe", "expected": "NEUTRAL" },
-  { "text": "Wkwkwk kocak", "expected": "POSITIVE" },
-  { "text": "Aduh pusing liat kameranya goyang", "expected": "NEGATIVE" },
-  { "text": "Saya ngerti sekarang, makasih", "expected": "POSITIVE" },
-  { "text": "Asik nih lagunya", "expected": "POSITIVE" },
-  { "text": "Top!", "expected": "POSITIVE" },
-  { "text": "Lumayan lah buat pemula", "expected": "POSITIVE" },
-  { "text": "Biasa aja", "expected": "NEUTRAL" },
-  { "text": "Gak sesuai judul", "expected": "NEGATIVE" },
-  { "text": "Clickbait", "expected": "NEGATIVE" },
-  { "text": "Bisa tolong buat tutorialnya bang?", "expected": "NEUTRAL" },
-  { "text": "Gila keren", "expected": "POSITIVE" }
+  {
+    "text": "Wah keren banget videonya, mantap!",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Sangat membantu, makasih ya bang",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Top markotop! Kualitas suaranya jernih.",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Aku suka cara penjelasannya, gampang dimengerti.",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Video ini ngasih insight baru. Keren bgt sumpah.",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Luar biasa, ditunggu konten selanjutnya!",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Terbaik emang channel ini",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Gila, ini sih masterpiece!",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Lucu banget ngakak guling-guling 😂",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Keren parah! ❤️",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Bagus banget sampe pengen muntah",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Kualitas bagus tapi harganya mahal banget",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Awalnya mikir ini jelek, ternyata mantap juga",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Suka sih sama videonya, tapi kenapa suaranya kecil amat",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Keren tapi ngeselin",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Ini jelek parah, hoax dan bohong",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Nyesel nonton, buang-buang waktu",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Videonya burik, suaranya cempreng",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Kecewa banget sama kualitasnya",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Membosankan. Jangan ditonton.",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Payah, gak sesuai ekspektasi",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Konten sampah!",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Benci banget liat mukanya",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Sangat buruk, gak ada manfaatnya",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Gagal total, mending hapus aja videonya",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Goblok lu, bikin video gak bener",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Dasar anjing, penipu!",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Tolol banget sih yang ngomong",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Babi emang, clickbait doang isinya",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Mati aja lu bangsat",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Dapatkan uang 50 juta dalam sehari! Cek channel saya ya kak",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Yuk subs balik, aku udah subs kamu. http://spam.com",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Cek profilku untuk melihat video dewasa terbaru link.com",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Beli followers murah meriah hanya di sini: instagram.com",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Ayo buruan klik link ini untuk menang iphone 14 gratis! https://scam.net",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Saya sedang menonton video ini",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Durasi videonya 10 menit",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Dia memakai baju merah",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Tadi jam 8 malam aku buka youtube",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Lokasinya di jakarta ya?",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Video ini diunggah tahun 2023",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Berapa harganya bang?",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Kamera apa yang dipake?",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Hadir",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Menyimak dari bali",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Keren sih, tapi kurang panjang durasinya",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Bagus, tapi saya benci bagian akhirnya",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Mantap idenya, sayang eksekusinya gagal",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Suka dengan editingnya, tapi isinya bodoh",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Lucu tapi garing",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Bagus banget videonya kak!",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Informatif dan edukatif",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Sangat menginspirasi",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Terima kasih atas ilmunya",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Konten yang selalu aku tunggu",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Wah gila keren",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Saya suka sekali dengan gaya penyampaiannya",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Bikin semangat lagi nih",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Bagus bgtttt",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Luar biasa mas",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Tolong dong dibikin lebih jelek lagi",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Ini apa sih maksudnya? Bingung",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Gak jelas banget videonya",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Terlalu bertele-tele dan membosankan",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Males nontonnya kalau gini terus",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Gak ada lucunya sama sekali",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Sumpah ini video terburuk yang pernah kulihat",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Kecewa berat",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Norak banget gaya ngomongnya",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Alay lu",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Tolol",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Dasar idiot",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Ngentot lu bangsat",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Goblok banget sumpah",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Perek lu",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Subs channel gw dong bang, gw pemula",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Mampir channel aku yukkk",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Cek channel aku ada hadiah buat kalian",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Halo kak, follback ig aku dong",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Cara cepat kaya cek bio saya",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Wah bagus",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Sangat jelek",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Ini video tentang apa?",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Saya nonton ini sambil makan",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Mantap banget pokoknya",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Parah banget editingnya jelek",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Cinta banget sama channel ini",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Benci banget sumpah",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Hehe",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Wkwkwk kocak",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Aduh pusing liat kameranya goyang",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Saya ngerti sekarang, makasih",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Asik nih lagunya",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Top!",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Lumayan lah buat pemula",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Biasa aja",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Gak sesuai judul",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Clickbait",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Bisa tolong buat tutorialnya bang?",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Gila keren",
+    "expected": "POSITIVE"
+  },
+  {
+    "text": "Bagus sih, tapi boong",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "Apakah video ini rilis hari ini?",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Gw nonton ini di kamar mandi",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Gambarnya bagus, suaranya kayak kaleng rombeng",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Keren, sayangnya mahal",
+    "expected": "MIXED"
+  },
+  {
+    "text": "Tolong dong buat video tentang masak",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Anjing keren banget sumpah!",
+    "expected": "TOXIC"
+  },
+  {
+    "text": "Minta link bang",
+    "expected": "SPAM"
+  },
+  {
+    "text": "Mending turu",
+    "expected": "NEGATIVE"
+  },
+  {
+    "text": "B aja",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Biasa",
+    "expected": "NEUTRAL"
+  },
+  {
+    "text": "Wkwkwk",
+    "expected": "NEUTRAL"
+  }
 ]
