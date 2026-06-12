@@ -1,9 +1,9 @@
 ---
-name: youtube-sentiment-analysis
+name: rasalytics-sentiment
 description: Use when analyzing, debugging, evaluating, or changing sentiment classification for YouTube comments in this repository, including Indonesian or English preprocessing, transformer inference, lexicon fallback, spam or toxicity labels, mixed sentiment, Ollama verification, confidence, and benchmark accuracy.
 ---
 
-# YouTube Sentiment Analysis
+# Rasalytics Sentiment Analysis
 
 ## Core Rule
 
@@ -52,4 +52,4 @@ low-confidence fallback, or Ollama correction as applicable. Keep benchmark
 expectations aligned with the assertion in `src/index.test.ts`, not stale prose.
 
 For YouTube API fetching, pagination, replies, quota, or disabled-comment
-handling, use `$youtube-comments-scraper`.
+handling, use `$rasalytics`.

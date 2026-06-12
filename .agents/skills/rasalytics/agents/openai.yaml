@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rasalytics Scraper"
+  short_description: "Fetch YouTube comments with the official API"
+  default_prompt: "Use $rasalytics to fetch YouTube comments safely with the official Data API."

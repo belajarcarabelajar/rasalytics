@@ -1,9 +1,9 @@
 ---
-name: youtube-comments-scraper
+name: rasalytics
 description: Use when fetching or exporting YouTube comments in this repository through YouTube Data API v3, including video IDs, top-level threads, replies, pagination, retry behavior, quota errors, disabled comments, API key safety, and Bun CLI execution.
 ---
 
-# YouTube Comments Scraper
+# Rasalytics Scraper
 
 ## Core Rule
 
@@ -34,7 +34,7 @@ browser automation.
 
 ## Sentiment Delegation
 
-**REQUIRED SUB-SKILL:** Use `$youtube-sentiment-analysis` for any change to
+**REQUIRED SUB-SKILL:** Use `$rasalytics-sentiment` for any change to
 preprocessing, language detection, transformer or lexicon models, confidence,
 label taxonomy, spam or toxicity classification, Ollama verification, benchmark
 behavior, or sentiment output fields.

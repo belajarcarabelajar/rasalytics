@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rasalytics Sentiment Analysis"
+  short_description: "Maintain local YouTube sentiment classification"
+  default_prompt: "Use $rasalytics-sentiment to inspect or improve this repository sentiment pipeline."

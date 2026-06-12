@@ -1,4 +1,4 @@
-# youtube-comments-scraper
+# Rasalytics
 A powerful YouTube comments scraper and hybrid sentiment analyzer specifically tuned for English and Indonesian languages.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
@@ -50,8 +50,8 @@ Ultimately, this project is not just a technological achievement in machine lear
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/belajarcarabelajar/youtube-comments-scraper.git
-   cd youtube-comments-scraper
+   git clone https://github.com/belajarcarabelajar/rasalytics.git
+   cd rasalytics
    ```
 2. Install dependencies:
    ```bash
@@ -99,7 +99,7 @@ Full markdown report saved to: /mnt/c/Users/Tedi Rahmat/Downloads/comments_5bKxk
 
 ## Project Structure
 ```text
-youtube-comments-scraper/
+rasalytics/
 ├── src/
 │   ├── index.ts           # Main scraper and analyzer script
 │   ├── index.test.ts      # Test suite for sentiment and scraping logic

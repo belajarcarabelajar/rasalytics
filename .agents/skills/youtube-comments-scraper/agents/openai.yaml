@@ -1,4 +1,0 @@
-interface:
-  display_name: "YouTube Comments Scraper"
-  short_description: "Fetch YouTube comments with the official API"
-  default_prompt: "Use $youtube-comments-scraper to fetch YouTube comments safely with the official Data API."

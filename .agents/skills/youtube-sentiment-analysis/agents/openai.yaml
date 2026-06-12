@@ -1,4 +1,0 @@
-interface:
-  display_name: "YouTube Sentiment Analysis"
-  short_description: "Maintain local YouTube sentiment classification"
-  default_prompt: "Use $youtube-sentiment-analysis to inspect or improve this repository sentiment pipeline."

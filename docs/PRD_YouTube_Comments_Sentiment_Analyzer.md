@@ -1,4 +1,4 @@
-# Product Requirements Document (PRD): YouTube Comments Sentiment Analyzer
+# Product Requirements Document (PRD): Rasalytics
 
 ## 1. Initial Request Analysis
 **Weaknesses of the Initial Request:**
@@ -10,7 +10,7 @@
 - **Execution Risk:** High risk of quota exhaustion, failure on videos with disabled comments, and leaking API keys if `.env` rules are not strictly defined.
 
 **Current Implementation State:**
-- **Repository Path:** `/home/belajarcarabelajar/YouTube Comments Scraper`
+- **Repository Path:** `/home/belajarcarabelajar/rasalytics`
 - **Existing Scripts/Files:** The directory contains only reference documentation (`YouTube_Data_API_v3.md`, `YouTube_Data_API_v3_Docs.md`). No existing code.
 - **Package Manager:** Not yet initialized (Must use Bun).
 - **Environment Variables:** None currently (Will require `.env`).
@@ -93,7 +93,7 @@ Test coverage targets using `bun test`:
 The following checklist must be executable item by item by the development agent.
 
 ### Phase 1: Setup & Configuration
-- [ ] Initialize Bun project in `/home/belajarcarabelajar/YouTube Comments Scraper`.
+- [ ] Initialize Bun project in /home/belajarcarabelajar/rasalytics.
 - [ ] Create `.gitignore` including `node_modules`, `.env`, and output data files (`*.csv`, `*.json`).
 - [ ] Implement environment variable loader ensuring `YOUTUBE_API_KEY` exists.
 

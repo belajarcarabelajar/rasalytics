@@ -1,5 +1,5 @@
 {
-  "name": "youtube-comments-scraper",
+  "name": "rasalytics",
   "version": "1.0.0",
   "module": "src/index.ts",
   "type": "module",
