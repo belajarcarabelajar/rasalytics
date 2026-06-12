@@ -462,7 +462,11 @@ async function run() {
        let commentCount = "0";
        
        try {
-         const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${VIDEO_ID}&key=${API_KEY}`);
+         const vUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
+         vUrl.searchParams.append("part", "snippet,statistics");
+         vUrl.searchParams.append("id", VIDEO_ID);
+         vUrl.searchParams.append("key", API_KEY!);
+         const vRes = await fetch(vUrl.toString());
          if (vRes.ok) {
            const vData = await vRes.json();
            if (vData.items && vData.items.length > 0) {
@@ -488,21 +492,31 @@ async function run() {
        const csvPath = `./comments_${VIDEO_ID}.csv`;
        const cleanCsvPath = `./comments_${VIDEO_ID}_clean.csv`;
        
+       function sanitizeCsvField(text: string): string {
+         let escaped = (text || "").replace(/"/g, '""');
+         if (/^[=\+\-@]/.test(escaped)) {
+           escaped = "'" + escaped;
+         }
+         return escaped;
+       }
+       
        writeFileSync(mdPath, markdownLines.join("\n"), "utf-8");
        
        const allRows = db.query("SELECT * FROM comments").all() as any[];
        const csvLines = ["comment_id,author,sentiment_label,is_spam,is_toxic,is_buzzer,buzzer_group_id,raw_text"];
        for (const r of allRows) {
-         const escapedText = r.raw_text.replace(/"/g, '""');
-         csvLines.push(`"${r.comment_id}","${r.author}","${r.sentiment_label}",${r.spam_flag},${r.toxic_flag},${r.is_buzzer},"${r.buzzer_group_id}","${escapedText}"`);
+         const escapedText = sanitizeCsvField(r.raw_text);
+         const escapedAuthor = sanitizeCsvField(r.author);
+         csvLines.push(`"${r.comment_id}","${escapedAuthor}","${r.sentiment_label}",${r.spam_flag},${r.toxic_flag},${r.is_buzzer},"${r.buzzer_group_id}","${escapedText}"`);
        }
        writeFileSync(csvPath, csvLines.join("\n"), "utf-8");
 
        const cleanRows = db.query("SELECT * FROM comments WHERE spam_flag=0 AND toxic_flag=0 AND is_buzzer=0").all() as any[];
        const cleanCsvLines = ["comment_id,author,sentiment_label,raw_text"];
        for (const r of cleanRows) {
-         const escapedText = r.raw_text.replace(/"/g, '""');
-         cleanCsvLines.push(`"${r.comment_id}","${r.author}","${r.sentiment_label}","${escapedText}"`);
+         const escapedText = sanitizeCsvField(r.raw_text);
+         const escapedAuthor = sanitizeCsvField(r.author);
+         cleanCsvLines.push(`"${r.comment_id}","${escapedAuthor}","${r.sentiment_label}","${escapedText}"`);
        }
        writeFileSync(cleanCsvPath, cleanCsvLines.join("\n"), "utf-8");
 

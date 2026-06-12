@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div id="out">Running...</div>
+  <script>
+    setTimeout(() => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 800;
+        canvas.height = 400;
+        const ctx = canvas.getContext('2d');
+        const chart = new Chart(ctx, {
+          type: 'line',
+          data: { labels: ['A', 'B'], datasets: [{data: [1, 2]}] },
+          options: { responsive: false, animation: false }
+        });
+        
+        const img1 = canvas.toDataURL();
+        
+        setTimeout(() => {
+          const img2 = canvas.toDataURL();
+          document.getElementById('out').innerText = `img1 len: ${img1.length}, img2 len: ${img2.length}`;
+        }, 100);
+      } catch(e) {
+        document.getElementById('out').innerText = "ERROR: " + e.message;
+      }
+    }, 100);
+  </script>
+</body>
+</html>

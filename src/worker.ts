@@ -27,15 +27,22 @@ interface Env {
   YOUTUBE_API_KEY?: string;
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
-
 export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
     const url = new URL(request.url);
+    
+    const origin = request.headers.get("Origin") || "";
+    const allowedOrigins = ["http://localhost:8787", "http://127.0.0.1:8787", "http://localhost:3000", "http://127.0.0.1:3000"];
+    const allowOrigin = allowedOrigins.includes(origin) ? origin : "https://rasalytics-kurniawaniwan7906.pages.dev";
+    
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": allowOrigin,
+      "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "X-Content-Type-Options": "nosniff",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+      "X-Frame-Options": "DENY"
+    };
 
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
@@ -68,7 +75,11 @@ export default {
         let videoDetails = { title: "Unknown", channel: "Unknown", views: 0, likes: 0, commentCount: 0 };
         try {
           if (subrequestCount >= MAX_SUBREQUESTS) throw new Error("Limit");
-          const vRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${videoId}&key=${apiKey}`);
+          const vUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
+          vUrl.searchParams.append("part", "snippet,statistics");
+          vUrl.searchParams.append("id", videoId);
+          vUrl.searchParams.append("key", apiKey);
+          const vRes = await fetch(vUrl.toString());
           subrequestCount++;
           if (vRes.ok) {
             const vData = await vRes.json() as any;

@@ -29,5 +29,12 @@
     "franc-min": "^6.2.0",
     "natural": "^8.1.1",
     "sentiment": "^5.0.2"
+  },
+  "trustedDependencies": [
+    "protobufjs"
+  ],
+  "overrides": {
+    "protobufjs": ">=7.3.0",
+    "uuid": ">=13.0.1"
   }
 }
