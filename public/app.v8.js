@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       pagesVal.textContent = `${val} Pages`;
     }
+    pagesInput.setAttribute('aria-valuetext', pagesVal.textContent);
   });
   
   // Init slider label
@@ -29,10 +30,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const initMax = parseInt(pagesInput.max, 10);
   pagesVal.textContent = initVal === initMax ? 'ALL PAGES' : `${initVal} Pages`;
 
-  analyzeVideoBtn.addEventListener('click', async () => {
+  const controlForm = document.getElementById('controlForm');
+  controlForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    videoInput.removeAttribute('aria-invalid');
     const rawVid = videoInput.value.trim();
     if (!rawVid) {
       showError('MISSING TARGET ID');
+      videoInput.setAttribute('aria-invalid', 'true');
       return;
     }
     
@@ -74,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       showError(error.message);
       emptyState.style.display = 'flex';
+      videoInput.setAttribute('aria-invalid', 'true');
     } finally {
       loadingState.style.display = 'none';
       btnText.textContent = originalText;
@@ -107,6 +113,37 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('barNeg').style.width = total > 0 ? `${(data.negative/total)*100}%` : '0%';
     document.getElementById('barMix').style.width = total > 0 ? `${((data.mixed || 0)/total)*100}%` : '0%';
 
+    // Pie Chart
+    const pieCanvas = document.getElementById('sentimentPieChart');
+    if (pieCanvas && typeof Chart !== 'undefined') {
+      if (window.sentimentPieChartObj) {
+        window.sentimentPieChartObj.destroy();
+      }
+      window.sentimentPieChartObj = new Chart(pieCanvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['Positive', 'Neutral', 'Negative', 'Mixed'],
+          datasets: [{
+            data: [data.positive, data.neutral, data.negative, data.mixed || 0],
+            backgroundColor: ['#00FF66', '#888888', '#FF0055', '#FFBB00'],
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: { color: 'white', font: { family: 'JetBrains Mono', size: 12 } }
+            }
+          }
+        }
+      });
+    }
+
     // Top Comments separated
     function renderList(listId, arr) {
       const list = document.getElementById(listId);
@@ -126,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           el.innerHTML = `
             <div class="comment-header">
-              <span class="comment-author">@${c.author}</span>
+              <span class="comment-author">${c.author.startsWith('@') ? '' : '@'}${c.author}</span>
               <div class="comment-stats">
                 <span style="color: ${sentColor}; font-weight: 700;" title="Reasoning: ${c.reasoning || ''}">[${c.sentiment}] (${c.confidence || 0}%)</span>
                 <span>♥ ${c.likes}</span>
@@ -167,74 +204,136 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Time Series QuickChart Image Embed
-    const tsContainer = document.getElementById('timeSeriesChartContainer');
-    if (tsContainer) {
-      if (data.timeSeries && data.timeSeries.length > 0) {
-        tsContainer.innerHTML = '<div class="loader-bar"></div><p style="color: var(--border-color); text-align: center; width: 100%;">GENERATING CHART...</p>';
-        
-        const labels = data.timeSeries.map(d => d.date);
-        const posData = data.timeSeries.map(d => d.pos);
-        const negData = data.timeSeries.map(d => d.neg);
-
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = 800;
-          canvas.height = 400;
-          const ctx = canvas.getContext('2d');
+    setTimeout(() => {
+      const tsContainer = document.getElementById('timeSeriesChartContainer');
+      if (tsContainer) {
+        if (data.timeSeries && data.timeSeries.length > 0) {
+          tsContainer.innerHTML = '<div class="loader-bar"></div><p style="color: var(--border-color); text-align: center; width: 100%;">GENERATING CHART...</p>';
           
-          // Draw dark background
-          ctx.fillStyle = '#111111';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          const labels = data.timeSeries.map(d => d.date);
+          const posData = data.timeSeries.map(d => d.pos);
+          const negData = data.timeSeries.map(d => d.neg);
 
-          new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: labels,
-              datasets: [
-                {
-                  label: 'Positive',
-                  data: posData,
-                  borderColor: '#00FF66',
-                  backgroundColor: 'rgba(0, 255, 102, 0.2)',
-                  borderWidth: 3,
-                  fill: true,
-                  tension: 0.3
-                },
-                {
-                  label: 'Negative',
-                  data: negData,
-                  borderColor: '#FF0055',
-                  backgroundColor: 'rgba(255, 0, 85, 0.2)',
-                  borderWidth: 3,
-                  fill: true,
-                  tension: 0.3
-                }
-              ]
-            },
-            options: {
-              responsive: false,
-              animation: false,
-              scales: {
-                x: { ticks: { color: 'white' }, grid: { color: '#333333' } },
-                y: { ticks: { color: 'white' }, grid: { color: '#333333' }, beginAtZero: true }
+          if (labels.length === 1) {
+            labels.unshift("Start");
+            posData.unshift(0);
+            negData.unshift(0);
+          }
+
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 800;
+            canvas.height = 400;
+            const ctx = canvas.getContext('2d');
+
+            new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    label: 'Positive',
+                    data: posData,
+                    borderColor: '#00FF66',
+                    backgroundColor: 'rgba(0, 255, 102, 0.2)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3
+                  },
+                  {
+                    label: 'Negative',
+                    data: negData,
+                    borderColor: '#FF0055',
+                    backgroundColor: 'rgba(255, 0, 85, 0.2)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3
+                  }
+                ]
               },
-              plugins: {
-                legend: { labels: { color: 'white', font: { size: 14 } } }
-              }
+              options: {
+                responsive: false,
+                animation: {
+                  duration: 0,
+                  onComplete: function() {
+                    const imgUrl = canvas.toDataURL('image/png');
+                    tsContainer.innerHTML = `<img src="${imgUrl}" alt="Sentiment Over Time" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px;">`;
+                  }
+                },
+                scales: {
+                  x: { ticks: { color: 'white' }, grid: { color: '#333333' } },
+                  y: { ticks: { color: 'white' }, grid: { color: '#333333' }, beginAtZero: true }
+                },
+                plugins: {
+                  legend: { labels: { color: 'white', font: { size: 14 } } }
+                }
+              },
+              plugins: [{
+                id: 'customBackground',
+                beforeDraw: (chart) => {
+                  const ctx = chart.ctx;
+                  ctx.save();
+                  ctx.globalCompositeOperation = 'destination-over';
+                  ctx.fillStyle = '#111111';
+                  ctx.fillRect(0, 0, chart.width, chart.height);
+                  ctx.restore();
+                }
+              }]
+            });
+          } catch (e) {
+            console.error(e);
+            tsContainer.innerHTML = '<p style="color: var(--neg); width: 100%; text-align: center;">CHART GENERATION FAILED</p>';
+          }
+        } else {
+          tsContainer.innerHTML = '<p style="color: var(--border-color); width: 100%; text-align: center;">NO TEMPORAL DATA FOUND</p>';
+        }
+      }
+    }, 0);
+
+    // WordCloud Generation
+    setTimeout(() => {
+      if (data.allComments && data.allComments.length > 0 && typeof WordCloud !== 'undefined') {
+        const wordMap = new Map();
+        const stopwords = ["di", "ke", "dari", "yang", "dan", "untuk", "pada", "adalah", "ini", "itu", "dengan", "saya", "kamu", "dia", "mereka", "kita", "kami", "gak", "tidak", "ya", "yg", "aja", "ada", "bisa", "udah", "kalau", "kalo", "buat", "juga", "lagi", "sama", "kok", "sih", "kan", "pun", "nya", "lebih", "tapi", "dalam", "seperti", "atau", "jadi", "aku", "banyak", "orang", "baru", "satu", "sekarang", "biar", "terus", "apa", "aja", "udah", "bukan", "hanya", "sampai", "wkwk", "wkwkwk", "karena", "karna", "buat", "pas", "masih", "belum", "kalau", "kalo", "udah", "udh", "gitu"];
+        
+        data.allComments.forEach(c => {
+          const text = (c.text || "").toLowerCase();
+          const words = text.replace(/[^a-z0-9\s-]/g, ' ').split(/\s+/);
+          words.forEach(w => {
+            if (w.length > 3 && !stopwords.includes(w)) {
+              wordMap.set(w, (wordMap.get(w) || 0) + 1);
             }
           });
-
-          // Extract to image
-          const imgUrl = canvas.toDataURL('image/png');
-          tsContainer.innerHTML = `<img src="${imgUrl}" alt="Sentiment Over Time" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px;">`;
-        } catch (e) {
-          console.error(e);
-          tsContainer.innerHTML = '<p style="color: var(--neg); width: 100%; text-align: center;">CHART GENERATION FAILED</p>';
+        });
+        
+        const list = Array.from(wordMap.entries())
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 100);
+          
+        if (list.length > 0) {
+          // Adjust weight factor to make words fit nicely
+          const maxFreq = list[0][1];
+          const multiplier = maxFreq > 0 ? (60 / maxFreq) : 1;
+          
+          WordCloud(document.getElementById('wordcloudCanvas'), {
+            list: list,
+            weightFactor: function (size) {
+              return Math.max(14, size * multiplier);
+            },
+            fontFamily: 'JetBrains Mono',
+            color: function() {
+              // Brilliantly vibrant colors for dark mode
+              const colors = ['#00FF66', '#FF0055', '#00DDFF', '#FFBB00', '#BB00FF'];
+              return colors[Math.floor(Math.random() * colors.length)];
+            },
+            backgroundColor: '#111111',
+            rotateRatio: 0,
+            gridSize: 10,
+            shape: 'square'
+          });
         }
-      } else {
-        tsContainer.innerHTML = '<p style="color: var(--border-color); width: 100%; text-align: center;">NO TEMPORAL DATA FOUND</p>';
       }
-    }
+    }, 50);
 
     window._latestAnalyzeData = data;
     videoResultsSection.style.display = 'block';

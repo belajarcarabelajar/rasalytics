@@ -1,0 +1,7 @@
+{
+  "extends": ["markuplint:recommended-ac"],
+  "rules": {
+    "landmark-roles": true,
+    "require-accessible-name": true
+  }
+}

@@ -1,19 +1,10 @@
 import { parseArgs } from "util";
-import Sentiment from "sentiment";
 import { writeFileSync, existsSync, unlinkSync } from "fs";
 import { emojiEmotion } from "emoji-emotion";
 import { idLexicon, toxicLexicon, slangDict, spamKeywords } from "./lexicons";
-import { pipeline, env } from "@xenova/transformers";
-import { franc } from "franc-min";
 import { Database } from "bun:sqlite";
 
-env.localModelPath = './local_models';
-env.allowRemoteModels = true;
-
-const MODEL_VERSION = "v6.0-hybrid-ollama";
-let classifierEn: any = null;
-let classifierId: any = null;
-
+const MODEL_VERSION = "v7.0-pure-classical-ml";
 const { values } = parseArgs({
   args: process.argv.slice(2),
   options: {
@@ -36,8 +27,6 @@ const emojiScores: Record<string, number> = {};
 emojiEmotion.forEach((e: any) => {
   emojiScores[e.emoji] = e.polarity;
 });
-
-const sentiment = new Sentiment();
 
 export interface CommentData {
   comment_id: string;
@@ -62,41 +51,8 @@ export function escapeMarkdown(text: string): string {
   return text.replace(/\|/g, "\\|").replace(/\n/g, " ").replace(/\r/g, "");
 }
 
-export function preprocess(text: string) {
-  let norm = text.toLowerCase();
-  
-  const urls = norm.match(/https?:\/\/[^\s]+/g) || norm.match(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g) || [];
-  
-  norm = norm.replace(/https?:\/\/[^\s]+/g, " ");
-  norm = norm.replace(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g, " ");
-  norm = norm.replace(/@[^\s]+/g, " ");
-  norm = norm.replace(/#[^\s]+/g, " ");
-  
-  // Convert emojis to their text names
-  for (const e of emojiEmotion) {
-    if (norm.includes(e.emoji)) {
-      norm = norm.replaceAll(e.emoji, ` ${e.name} `);
-    }
-  }
-
-  // handle negations before punctuation removal
-  norm = norm.replace(/\b(gak|ga|ngga|tidak)\s+([a-z]+)\b/g, "$1_$2");
-  
-  // Normalize repeating characters (e.g., baguuuus -> baguus)
-  norm = norm.replace(/(.)\1{2,}/g, "$1$1");
-
-  norm = norm.replace(/[\/#!$%\^&\*;:{}=\-_`~()]/g," ");
-  norm = norm.replace(/[.,?]/g," . ");
-  norm = norm.replace(/\s{2,}/g, " ").trim();
-  
-  const words = norm.split(" ");
-  const mapped = words.map(w => slangDict[w] || w);
-  
-  return {
-    normalized: mapped.join(" "),
-    urls
-  };
-}
+import { preprocess } from "./shared-sentiment.js";
+export { preprocess };
 
 export async function analyzeComment(text: string): Promise<{ 
   score: number, 
@@ -110,118 +66,73 @@ export async function analyzeComment(text: string): Promise<{
   
   let isSpam = urls.length > 0;
   for (const kw of spamKeywords) {
-    if (normalized.includes(kw)) isSpam = true;
+    if (normalized.includes(kw) || text.toLowerCase().includes(kw)) isSpam = true;
   }
+  if (normalized.includes("link")) isSpam = true;
 
   let isToxic = false;
-  const words = normalized.split(" ");
-  for (const w of words) {
-    if (toxicLexicon.has(w)) isToxic = true;
+  for (const w of toxicLexicon) {
+    if (normalized.includes(w)) isToxic = true;
   }
 
   let label = "NEUTRAL";
-  let confidence = 0;
+  let confidence = 100;
   let reasoning = "";
   let score = 0;
 
   if (isToxic) {
     label = "TOXIC";
-    confidence = 100;
     reasoning = "Matched toxic dictionary";
   } else if (isSpam) {
     label = "SPAM";
-    confidence = 100;
     reasoning = "Matched spam dictionary or URL";
   } else if (normalized.trim().length === 0) {
     label = "NEUTRAL";
-    confidence = 100;
     reasoning = "Empty or emoji only";
   } else {
-    try {
-      const language = franc(normalized);
-      let currentClassifier;
-      let usedModel = "unknown";
-
-      if (language === 'eng') {
-        if (!classifierEn) {
-          classifierEn = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english');
-        }
-        currentClassifier = classifierEn;
-        usedModel = "SST-2-English";
-      } else {
-        if (!classifierId) {
-          classifierId = await pipeline('sentiment-analysis', 'Xenova/bert-base-multilingual-uncased-sentiment');
-        }
-        currentClassifier = classifierId;
-        usedModel = "BERT-Multilingual";
-      }
-
-      const chunks = normalized.split('.').map(s => s.trim()).filter(s => s.length > 3);
-      if (chunks.length === 0) chunks.push(normalized);
-      
-      let totalScore = 0;
-      let totalConfidence = 0;
-      let hasPositive = false;
-      let hasNegative = false;
-      
-      for (const chunk of chunks) {
-        const result = await currentClassifier(chunk);
-        const modelLabel = result[0].label.toLowerCase();
-        const modelScore = result[0].score;
-        
-        let chunkScore = 0;
-        if (modelLabel.includes("pos") || modelLabel.includes("4 star") || modelLabel.includes("5 star")) { chunkScore = 1; hasPositive = true; }
-        else if (modelLabel.includes("neg") || modelLabel.includes("1 star") || modelLabel.includes("2 star")) { chunkScore = -1; hasNegative = true; }
-        
-        totalScore += chunkScore;
-        totalConfidence += modelScore;
-      }
-      
-      const avgScore = totalScore / chunks.length;
-      confidence = Math.round((totalConfidence / chunks.length) * 100);
-      
-      const lexResult = sentiment.analyze(normalized, { extras: idLexicon });
-      
-      if (confidence < 75 || Math.abs(lexResult.score) >= 2) {
-        if (lexResult.score >= 2) {
-          totalScore = Math.max(1, totalScore + 1);
-          hasPositive = true;
-          if (chunks.length <= 2) hasNegative = false;
-          usedModel += " + LexOverride(Pos)";
-        } else if (lexResult.score <= -2) {
-          totalScore = Math.min(-1, totalScore - 1);
-          hasNegative = true;
-          if (chunks.length <= 2) hasPositive = false;
-          usedModel += " + LexOverride(Neg)";
-        } else if (lexResult.score === 1 && avgScore <= 0) {
-          totalScore += 1;
-          hasPositive = true;
-          usedModel += " + Lex(Pos)";
-        } else if (lexResult.score === -1 && avgScore >= 0) {
-          totalScore -= 1;
-          hasNegative = true;
-          usedModel += " + Lex(Neg)";
+    const words = normalized.split(/\s+/);
+    const positive = [];
+    const negative = [];
+    
+    for (let i = 0; i < words.length; i++) {
+      if (i < words.length - 1) {
+        const bigram = `${words[i]}_${words[i+1]}`;
+        if (idLexicon[bigram] !== undefined) {
+          const val = idLexicon[bigram];
+          score += val;
+          if (val > 0) positive.push(bigram);
+          if (val < 0) negative.push(bigram);
+          i++; continue;
         }
       }
+      const word = words[i];
+      if (idLexicon[word] !== undefined) {
+        const val = idLexicon[word];
+        score += val;
+        if (val > 0) positive.push(word);
+        if (val < 0) negative.push(word);
+      }
+    }
 
-      if (hasPositive && hasNegative) {
-        label = "MIXED";
-        score = 0;
-      } else if (totalScore > 0) {
-        label = "POSITIVE";
-        score = 1;
-      } else if (totalScore < 0) {
+    if (positive.length > 0 && negative.length > 0) {
+      const minNeg = Math.min(...negative.map(w => idLexicon[w]));
+      if (minNeg <= -4) {
         label = "NEGATIVE";
         score = -1;
       } else {
-        label = "NEUTRAL";
+        label = "MIXED";
         score = 0;
       }
-      
-      reasoning = `Lang: ${language}, Model: ${usedModel}, Score: ${totalScore.toFixed(2)} (${confidence}%)`;
-    } catch (e: any) {
-       reasoning = `Error in ML Model: ${e.message}`;
+    } else if (score > 0) {
+      label = "POSITIVE";
+      score = 1;
+    } else if (score < 0) {
+      label = "NEGATIVE";
+      score = -1;
     }
+    
+    confidence = Math.min(100, 50 + (Math.abs(score) * 15));
+    reasoning = `Model: N-gram Classical Lexicon, RawScore: ${score} (${confidence}%)`;
   }
 
   return { score, confidence, label, isSpam, isToxic, reasoning };
@@ -265,7 +176,7 @@ export async function fetchWithRetry(url: string, retries = 3, backoff = 1000): 
   }
 }
 
-async function fetchCommentThreads(videoId: string, apiKey: string, pageToken?: string) {
+export async function fetchCommentThreads(videoId: string, apiKey: string, pageToken?: string) {
   const url = new URL("https://www.googleapis.com/youtube/v3/commentThreads");
   url.searchParams.append("part", "snippet");
   url.searchParams.append("videoId", videoId);
@@ -277,7 +188,7 @@ async function fetchCommentThreads(videoId: string, apiKey: string, pageToken?: 
   return fetchWithRetry(url.toString());
 }
 
-async function fetchReplies(parentId: string, apiKey: string, pageToken?: string) {
+export async function fetchReplies(parentId: string, apiKey: string, pageToken?: string) {
   const url = new URL("https://www.googleapis.com/youtube/v3/comments");
   url.searchParams.append("part", "snippet");
   url.searchParams.append("parentId", parentId);
@@ -289,54 +200,14 @@ async function fetchReplies(parentId: string, apiKey: string, pageToken?: string
   return fetchWithRetry(url.toString());
 }
 
-async function verifyWithOllama(text: string, mlLabel: string): Promise<string> {
-  const sample = text.length > 200 ? text.substring(0, 200) + "..." : text;
-  const safeSample = sample.replace(/"/g, "'");
-  const prompt = `You are an expert sentiment analyzer for Indonesian YouTube comments.
-Determine the actual sentiment of this comment. It may contain sarcasm, slang, or complaints.
-<comment>${safeSample}</comment>
-Reply with EXACTLY ONE WORD: POSITIVE, NEGATIVE, or NEUTRAL. No explanations or punctuation.`;
 
-  try {
-    const res = await fetch(OLLAMA_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        prompt: prompt,
-        stream: false,
-        options: { temperature: 0.0, num_predict: 5 }
-      })
-    });
-    if (!res.ok) return mlLabel;
-    const data = await res.json();
-    const output = data.response.trim().toUpperCase();
-    if (output.includes("POSITIVE")) return "POSITIVE";
-    if (output.includes("NEGATIVE")) return "NEGATIVE";
-    if (output.includes("NEUTRAL")) return "NEUTRAL";
-    return mlLabel;
-  } catch (e) {
-    return mlLabel;
-  }
-}
 
 export async function processComment(id: string, snippet: any): Promise<CommentData> {
   const rawText = snippet.textOriginal || snippet.textDisplay || "";
   const { normalized } = preprocess(rawText);
   let { score, confidence, label, isSpam, isToxic, reasoning } = await analyzeComment(rawText);
 
-  if (!isSpam && !isToxic && normalized.trim().length > 0) {
-    const ollamaLabel = await verifyWithOllama(normalized, label);
-    if (ollamaLabel !== label) {
-      reasoning += ` -> [Ollama Qwen: Corrected from ${label} to ${ollamaLabel}]`;
-      label = ollamaLabel;
-      if (label === "POSITIVE") score = 1;
-      else if (label === "NEGATIVE") score = -1;
-      else score = 0;
-    } else {
-      reasoning += ` -> [Ollama Qwen: Agreed]`;
-    }
-  }
+
 
   return {
     comment_id: id,
@@ -607,67 +478,11 @@ async function run() {
          console.error("Failed to fetch video details:", e);
        }
 
-       const markdownLines: string[] = [
-        `# YouTube Comments Analysis: ${VIDEO_ID}`,
-        `*Model Version: ${MODEL_VERSION}*`,
-        ``,
-        `## 🎥 Video Details`,
-        `- **Title:** ${videoTitle}`,
-        `- **Channel:** ${channelName}`,
-        `- **Views:** ${viewCount}`,
-        `- **Likes:** ${likeCount}`,
-        `- **Total Comments (API):** ${commentCount}`,
-        ``,
-        `## 📊 Summary & Actionable Insights`,
-        ``,
-        `\`\`\`mermaid`,
-        `pie title Sentiment Distribution`,
-        `    "Positive" : ${positive}`,
-        `    "Negative" : ${negative}`,
-        `    "Neutral" : ${neutral}`,
-        `    "Mixed" : ${mixed}`,
-        `\`\`\``,
-        ``,
-        `## 📈 Sentiment Over Time`,
-        ``,
-        `\`\`\`mermaid`,
-        `xychart-beta`,
-        `    title "Sentiment Trend (Positive vs Negative)"`,
-        `    x-axis [${xDates}]`,
-        `    y-axis "Count"`,
-        `    line [${posCounts}]`,
-        `    line [${negCounts}]`,
-        `\`\`\``,
-        ``,
-        `## ☁️ Word Cloud (Top Themes)`,
-        wordcloudPath ? `![Word Cloud](${wordcloudPath})` : `*Word cloud generation failed or not enough data.*`,
-        ``,
-        `- **Total Comments:** ${totalCount}`,
-        `- **Positive:** ${positive} (${((positive/totalCount)*100).toFixed(1)}%)`,
-        `- **Negative:** ${negative} (${((negative/totalCount)*100).toFixed(1)}%)`,
-        `- **Neutral:** ${neutral}`,
-        `- **Mixed:** ${mixed}`,
-        `- **Spam Ratio:** ${((spam/totalCount)*100).toFixed(1)}% (${spam} comments)`,
-        `- **Toxicity Ratio:** ${((toxic/totalCount)*100).toFixed(1)}% (${toxic} comments)`,
-        `- **Buzzer/Copas Ratio:** ${((buzzer/totalCount)*100).toFixed(1)}% (${buzzer} suspected)`,
-        ``,
-        `### 💡 Key Takeaways`,
-        `The video received predominantly ${positive > negative ? "Positive" : "Negative"} feedback.`,
-        spam > (totalCount * 0.1) ? `⚠️ **Warning:** High spam activity detected.` : `✅ Spam levels are normal.`,
-        toxic > (totalCount * 0.05) ? `⚠️ **Warning:** High toxicity levels detected.` : `✅ Community toxicity is low.`,
-        buzzer > (totalCount * 0.05) ? `🚨 **Alert:** Significant organized Buzzer/Astroturfing activity detected.` : `✅ Inorganic buzzer manipulation is low.`,
-        ``,
-        `## 🌟 Top 5 Positive Comments`,
-        ...topPositive.map(c => `- **${c.author}** (${c.like_count} likes): "${c.raw_text}" (Confidence: ${c.confidence_score}%)`),
-        ``,
-        `## 🚨 Top 5 Negative Comments`,
-        ...topNegative.map(c => `- **${c.author}** (${c.like_count} likes): "${c.raw_text}" (Confidence: ${c.confidence_score}%)`),
-        ``,
-        `## 🕸️ Top Buzzer Rings Forensics`,
-        buzzerRings.length > 0 ? buzzerRings.map(r => `- **Ring ID:** ${r.buzzer_group_id} | **Size:** ${r.buzz_count + 1} identical comments | **Template:** "${escapeMarkdown(r.raw_text)}"`).join("\n") : `No significant buzzer rings detected.`,
-        ``,
-        `*Note: Full raw data has been exported to CSV.*`
-       ];
+       const markdownLines = generateMarkdownReport({
+           VIDEO_ID, MODEL_VERSION, videoTitle, channelName, viewCount, likeCount, commentCount,
+           positive, negative, neutral, mixed, xDates, posCounts, negCounts, wordcloudPath,
+           totalCount, spam, toxic, buzzer, topPositive, topNegative, buzzerRings
+         });
 
        const mdPath = `./comments_${VIDEO_ID}.md`;
        const csvPath = `./comments_${VIDEO_ID}.csv`;
@@ -718,3 +533,93 @@ async function run() {
 }
 
 run();
+
+export interface ReportData {
+  VIDEO_ID: string;
+  MODEL_VERSION: string;
+  videoTitle: string;
+  channelName: string;
+  viewCount: string;
+  likeCount: string;
+  commentCount: string;
+  positive: number;
+  negative: number;
+  neutral: number;
+  mixed: number;
+  xDates: string;
+  posCounts: string;
+  negCounts: string;
+  wordcloudPath: string | null;
+  totalCount: number;
+  spam: number;
+  toxic: number;
+  buzzer: number;
+  topPositive: any[];
+  topNegative: any[];
+  buzzerRings: any[];
+}
+
+export function generateMarkdownReport(data: ReportData): string[] {
+  const { VIDEO_ID, MODEL_VERSION, videoTitle, channelName, viewCount, likeCount, commentCount, positive, negative, neutral, mixed, xDates, posCounts, negCounts, wordcloudPath, totalCount, spam, toxic, buzzer, topPositive, topNegative, buzzerRings } = data;
+  return [
+    `# YouTube Comments Analysis: ${VIDEO_ID}`,
+    `*Model Version: ${MODEL_VERSION}*`,
+    ``,
+    `## 🎥 Video Details`,
+    `- **Title:** ${videoTitle}`,
+    `- **Channel:** ${channelName}`,
+    `- **Views:** ${viewCount}`,
+    `- **Likes:** ${likeCount}`,
+    `- **Total Comments (API):** ${commentCount}`,
+    ``,
+    `## 📊 Summary & Actionable Insights`,
+    ``,
+    `\`\`\`mermaid`,
+    `pie title Sentiment Distribution`,
+    `    "Positive" : ${positive}`,
+    `    "Negative" : ${negative}`,
+    `    "Neutral" : ${neutral}`,
+    `    "Mixed" : ${mixed}`,
+    `\`\`\``,
+    ``,
+    `## 📈 Sentiment Over Time`,
+    ``,
+    `\`\`\`mermaid`,
+    `xychart-beta`,
+    `    title "Sentiment Trend (Positive vs Negative)"`,
+    `    x-axis [${xDates}]`,
+    `    y-axis "Count"`,
+    `    line [${posCounts}]`,
+    `    line [${negCounts}]`,
+    `\`\`\``,
+    ``,
+    `## ☁️ Word Cloud (Top Themes)`,
+    wordcloudPath ? `![Word Cloud](${wordcloudPath})` : `*Word cloud generation failed or not enough data.*`,
+    ``,
+    `- **Total Comments:** ${totalCount}`,
+    `- **Positive:** ${positive} (${((positive/totalCount)*100).toFixed(1)}%)`,
+    `- **Negative:** ${negative} (${((negative/totalCount)*100).toFixed(1)}%)`,
+    `- **Neutral:** ${neutral}`,
+    `- **Mixed:** ${mixed}`,
+    `- **Spam Ratio:** ${((spam/totalCount)*100).toFixed(1)}% (${spam} comments)`,
+    `- **Toxicity Ratio:** ${((toxic/totalCount)*100).toFixed(1)}% (${toxic} comments)`,
+    `- **Buzzer/Copas Ratio:** ${((buzzer/totalCount)*100).toFixed(1)}% (${buzzer} suspected)`,
+    ``,
+    `### 💡 Key Takeaways`,
+    `The video received predominantly ${positive > negative ? "Positive" : "Negative"} feedback.`,
+    spam > (totalCount * 0.1) ? `⚠️ **Warning:** High spam activity detected.` : `✅ Spam levels are normal.`,
+    toxic > (totalCount * 0.05) ? `⚠️ **Warning:** High toxicity levels detected.` : `✅ Community toxicity is low.`,
+    buzzer > (totalCount * 0.05) ? `🚨 **Alert:** Significant organized Buzzer/Astroturfing activity detected.` : `✅ Inorganic buzzer manipulation is low.`,
+    ``,
+    `## 🌟 Top 5 Positive Comments`,
+    ...topPositive.map(c => `- **${c.author}** (${c.like_count} likes): "${c.raw_text}" (Confidence: ${c.confidence_score}%)`),
+    ``,
+    `## 🚨 Top 5 Negative Comments`,
+    ...topNegative.map(c => `- **${c.author}** (${c.like_count} likes): "${c.raw_text}" (Confidence: ${c.confidence_score}%)`),
+    ``,
+    `## 🕸️ Top Buzzer Rings Forensics`,
+    buzzerRings.length > 0 ? buzzerRings.map(r => `- **Ring ID:** ${r.buzzer_group_id} | **Size:** ${r.buzz_count + 1} identical comments | **Template:** "${escapeMarkdown(r.raw_text)}"`).join("\n") : `No significant buzzer rings detected.`,
+    ``,
+    `*Note: Full raw data has been exported to CSV.*`
+  ];
+}
