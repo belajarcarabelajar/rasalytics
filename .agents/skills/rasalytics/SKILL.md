@@ -22,7 +22,9 @@ browser automation.
    disabled comments, and exhausted quota without an infinite loop.
 6. Pass each API snippet into `processComment` and preserve the exported
    `CommentData` fields.
-7. Run focused tests and then `bun test`.
+7. Generate comprehensive Markdown reports including Video Metadata, Mermaid `xychart-beta` for Sentiment Over Time, QuickChart API for Word Clouds, and Buzzer Forensics.
+8. Export both raw and clean CSV datasets (excluding spam, toxic, and buzzer comments).
+9. Run focused tests and then `bun test`.
 
 ## Constraints
 

@@ -54,8 +54,8 @@ Preserve:
 - reasoning summary
 - model version and processing timestamp
 
-Write reports to repository-relative or user-requested paths. Do not hardcode a
-specific user's home directory or Windows Downloads path.
+Write comprehensive Markdown reports including Video Metadata, Mermaid `xychart-beta` for Sentiment Over Time, QuickChart API for Word Clouds, and Buzzer Forensics. Do not hardcode a specific user's home directory or Windows Downloads path.
+Generate both raw and clean CSV datasets (excluding spam, toxic, and buzzer comments).
 
 ## Evaluation
 
