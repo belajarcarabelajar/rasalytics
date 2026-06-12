@@ -514,8 +514,8 @@ async function run() {
        const toxic = (db.query("SELECT COUNT(*) as c FROM comments WHERE toxic_flag=1").get() as any).c;
        const buzzer = (db.query("SELECT COUNT(*) as c FROM comments WHERE is_buzzer=1").get() as any).c;
 
-       const topPositive = db.query("SELECT * FROM comments WHERE sentiment_label='POSITIVE' AND spam_flag=0 ORDER BY like_count DESC LIMIT 5").all() as any[];
-       const topNegative = db.query("SELECT * FROM comments WHERE sentiment_label='NEGATIVE' AND spam_flag=0 ORDER BY like_count DESC LIMIT 5").all() as any[];
+       const topPositive = db.query("SELECT * FROM comments WHERE sentiment_label='POSITIVE' AND spam_flag=0 AND toxic_flag=0 AND is_buzzer=0 ORDER BY like_count DESC LIMIT 5").all() as any[];
+       const topNegative = db.query("SELECT * FROM comments WHERE sentiment_label='NEGATIVE' AND spam_flag=0 AND toxic_flag=0 AND is_buzzer=0 ORDER BY like_count DESC LIMIT 5").all() as any[];
        
        const buzzerRings = db.query(`
          SELECT buzzer_group_id, COUNT(*) as buzz_count, raw_text 
@@ -526,11 +526,91 @@ async function run() {
          LIMIT 5
        `).all() as any[];
 
+       const timeSeries = db.query(`
+         SELECT 
+           substr(published_at, 1, 10) as date,
+           SUM(CASE WHEN sentiment_label='POSITIVE' THEN 1 ELSE 0 END) as pos,
+           SUM(CASE WHEN sentiment_label='NEGATIVE' THEN 1 ELSE 0 END) as neg
+         FROM comments
+         WHERE published_at IS NOT NULL
+         GROUP BY date
+         ORDER BY date ASC
+       `).all() as any[];
+       const xDates = timeSeries.map(r => `"${r.date}"`).join(", ");
+       const posCounts = timeSeries.map(r => r.pos).join(", ");
+       const negCounts = timeSeries.map(r => r.neg).join(", ");
+
+       // Generate Word Cloud
+       const allTexts = db.query("SELECT normalized_text FROM comments WHERE spam_flag=0 AND toxic_flag=0 AND is_buzzer=0").all() as {normalized_text: string}[];
+       const stopwords = new Set(["dan", "yang", "di", "ke", "dari", "ini", "itu", "untuk", "dengan", "dalam", "pada", "adalah", "ada", "tidak", "akan", "juga", "sebagai", "oleh", "karena", "seperti", "kita", "bisa", "sudah", "saya", "kamu", "dia", "mereka", "atau", "apa", "saat", "jika", "lagi", "terus", "buat", "sama", "kok", "sih", "nya", "yg", "the", "and", "to", "of", "a", "in", "is", "that", "it", "for", "on", "with", "di", "aja", "udah", "ya", "gak", "ga", "kalo", "aku", "pun", "nah", "sih", "kok", "itu"]);
+       const wordCounts: Record<string, number> = {};
+       for (const row of allTexts) {
+         const words = (row.normalized_text || "").split(/\s+/);
+         for (const w of words) {
+           const cleanW = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+           if (cleanW.length > 2 && !stopwords.has(cleanW)) {
+             wordCounts[cleanW] = (wordCounts[cleanW] || 0) + 1;
+           }
+         }
+       }
+       const sortedWords = Object.entries(wordCounts).sort((a,b) => b[1] - a[1]).slice(0, 50);
+       const wordCloudText = sortedWords.map(w => w[0]).join(" ");
+       
+       let wordcloudPath = "";
+       if (wordCloudText.length > 0) {
+         try {
+           console.log("Generating Word Cloud...");
+           const wcRes = await fetch("https://quickchart.io/wordcloud", {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({
+               format: "png",
+               width: 800,
+               height: 400,
+               text: wordCloudText,
+               colors: ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
+             })
+           });
+           if (wcRes.ok) {
+             const wcBuf = await wcRes.arrayBuffer();
+             wordcloudPath = `./wordcloud_${VIDEO_ID}.png`;
+             writeFileSync(wordcloudPath, Buffer.from(wcBuf));
+           }
+         } catch(e) {
+           console.error("Failed to generate wordcloud:", e);
+         }
+       }
+
+
+
        const markdownLines: string[] = [
         `# YouTube Comments Analysis: ${VIDEO_ID}`,
         `*Model Version: ${MODEL_VERSION}*`,
         ``,
         `## 📊 Summary & Actionable Insights`,
+        ``,
+        `\`\`\`mermaid`,
+        `pie title Sentiment Distribution`,
+        `    "Positive" : ${positive}`,
+        `    "Negative" : ${negative}`,
+        `    "Neutral" : ${neutral}`,
+        `    "Mixed" : ${mixed}`,
+        `\`\`\``,
+        ``,
+        `## 📈 Sentiment Over Time`,
+        ``,
+        `\`\`\`mermaid`,
+        `xychart-beta`,
+        `    title "Sentiment Trend (Positive vs Negative)"`,
+        `    x-axis [${xDates}]`,
+        `    y-axis "Count"`,
+        `    line [${posCounts}]`,
+        `    line [${negCounts}]`,
+        `\`\`\``,
+        ``,
+        `## ☁️ Word Cloud (Top Themes)`,
+        wordcloudPath ? `![Word Cloud](${wordcloudPath})` : `*Word cloud generation failed or not enough data.*`,
+        ``,
         `- **Total Comments:** ${totalCount}`,
         `- **Positive:** ${positive} (${((positive/totalCount)*100).toFixed(1)}%)`,
         `- **Negative:** ${negative} (${((negative/totalCount)*100).toFixed(1)}%)`,
@@ -560,6 +640,7 @@ async function run() {
 
        const mdPath = `./comments_${VIDEO_ID}.md`;
        const csvPath = `./comments_${VIDEO_ID}.csv`;
+       const cleanCsvPath = `./comments_${VIDEO_ID}_clean.csv`;
        
        writeFileSync(mdPath, markdownLines.join("\n"), "utf-8");
        
@@ -570,6 +651,14 @@ async function run() {
          csvLines.push(`"${r.comment_id}","${r.author}","${r.sentiment_label}",${r.spam_flag},${r.toxic_flag},${r.is_buzzer},"${r.buzzer_group_id}","${escapedText}"`);
        }
        writeFileSync(csvPath, csvLines.join("\n"), "utf-8");
+
+       const cleanRows = db.query("SELECT * FROM comments WHERE spam_flag=0 AND toxic_flag=0 AND is_buzzer=0").all() as any[];
+       const cleanCsvLines = ["comment_id,author,sentiment_label,raw_text"];
+       for (const r of cleanRows) {
+         const escapedText = r.raw_text.replace(/"/g, '""');
+         cleanCsvLines.push(`"${r.comment_id}","${r.author}","${r.sentiment_label}","${escapedText}"`);
+       }
+       writeFileSync(cleanCsvPath, cleanCsvLines.join("\n"), "utf-8");
 
        console.log(`\n=== SENTIMENT RECAP ===`);
        console.log(`Macro F1 requirement: Check test suite (rtk bun test)`);
@@ -584,6 +673,7 @@ async function run() {
        console.log(`=======================`);
        console.log(`Markdown report saved to: ${mdPath}`);
        console.log(`Raw data exported to: ${csvPath}`);
+       console.log(`Clean data exported to: ${cleanCsvPath}`);
     }
     
     db.close();
