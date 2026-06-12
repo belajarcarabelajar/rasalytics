@@ -16,11 +16,18 @@ export const idLexicon: Record<string, number> = {
   tidak_paham: -2, tidak_ngerti: -2, tidak_jelek: 3, tidak_buruk: 3, tidak_kecewa: 2,
   membosankan: -3, mahal: -2, kecil: -1, tunggu: 2, menginspirasi: 3, pemula: 1, boong: -3, 
   rombeng: -3, turu: -2, sayang: -1, sayangnya: -2,
-  wonderful: 3, terrible: -3
+  wonderful: 3, terrible: -3,
+  // New slang / sentiment added during v8 rebuild
+  gelap: -2, greget: 3, enek: -3, mual: -3, bosen: -3,
+  gaje: -3, receh: 3, mid: -2, wkwk: 3, goks: 4, yaelah: -2,
+  cringe: -3, baper: 3, relate: 3, berisik: -3, kacau: -3,
+  kampret: -3, ancur: -3, mantul: 4, daging: 4, sus: -3,
+  kurang_greget: -3, menangis: -3, susah: -3, nangis: -3,
+  bego: -4, bikin_enek: -3
 };
 
 export const toxicLexicon: Set<string> = new Set([
-  "anjing", "babi", "bangsat", "kontol", "memek", "ngentot", "goblok", "tolol", "idiot", "sampah", "bajingan", "perek", "pelacur", "pantek", "kimak", "pukimak"
+  "anjing", "babi", "bangsat", "kontol", "memek", "ngentot", "goblok", "tolol", "idiot", "bajingan", "perek", "pelacur", "pantek", "kimak", "pukimak", "asu", "kampret"
 ]);
 
 export const slangDict: Record<string, string> = {
@@ -39,13 +46,26 @@ export const slangDict: Record<string, string> = {
   "gue": "saya",
   "lu": "kamu",
   "loe": "kamu",
-  "njir": "anjing",
-  "anjir": "anjing",
   "gak": "tidak",
   "ga": "tidak",
-  "ngga": "tidak"
+  "ngga": "tidak",
+  "jg": "juga",
+  "wkwk": "wkwk",
+  "wkwkwk": "wkwk",
+  "anjir": "anjir", // Don't map to anjing to avoid false toxicity
+  "anjay": "anjir",
+  "nice": "bagus",
+  "good": "bagus",
+  "helpful": "membantu",
+  "worst": "terburuk"
 };
 
 export const spamKeywords: string[] = [
-  "subs", "cek channel", "bio saya", "subscribe", "mampir", "follback", "profilku"
+  "subs", "cek channel", "bio saya", "subscribe", "mampir", "follback", "profilku",
+  "cek bio", "giveaway", "sub4sub"
+];
+
+export const conjunctions: string[] = [
+  " tapi ", " namun ", " sayangnya ", " cuma ", " walaupun ", " meskipun ",
+  " however ", " but ", " although "
 ];

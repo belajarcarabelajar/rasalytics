@@ -28,7 +28,8 @@
     "emoji-emotion": "^3.0.1",
     "franc-min": "^6.2.0",
     "natural": "^8.1.1",
-    "sentiment": "^5.0.2"
+    "sentiment": "^5.0.2",
+    "sharp": "0.32.6"
   },
   "trustedDependencies": [
     "protobufjs"

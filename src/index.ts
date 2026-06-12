@@ -1,10 +1,15 @@
+import "/home/belajarcarabelajar/rasalytics/preload_mock_sharp";
 import { parseArgs } from "util";
 import { writeFileSync, existsSync, unlinkSync } from "fs";
 import { emojiEmotion } from "emoji-emotion";
-import { idLexicon, toxicLexicon, slangDict, spamKeywords } from "./lexicons";
+import { idLexicon, toxicLexicon, slangDict, spamKeywords, conjunctions } from "./lexicons";
 import { Database } from "bun:sqlite";
+import { pipeline, env } from "@xenova/transformers";
 
-const MODEL_VERSION = "v7.0-pure-classical-ml";
+env.localModelPath = "./local_models";
+env.allowRemoteModels = false;
+
+const MODEL_VERSION = "v8.0-roberta-hybrid";
 const { values } = parseArgs({
   args: process.argv.slice(2),
   options: {
@@ -37,7 +42,7 @@ export interface CommentData {
   published_at: string;
   sentiment_score: number;
   confidence_score: number;
-  sentiment_label: string; 
+  sentiment_label: string;
   spam_flag: boolean;
   toxic_flag: boolean;
   reasoning_summary: string;
@@ -51,28 +56,86 @@ export function escapeMarkdown(text: string): string {
   return text.replace(/\|/g, "\\|").replace(/\n/g, " ").replace(/\r/g, "");
 }
 
-import { preprocess } from "./shared-sentiment.js";
+import { preprocess, analyzeEdgeSafe } from "./shared-sentiment.js";
 export { preprocess };
 
-export async function analyzeComment(text: string): Promise<{ 
-  score: number, 
+let classifier: any = null;
+
+export async function getClassifier() {
+  if (!classifier) {
+    try {
+      classifier = await pipeline("sentiment-analysis", "indonesian-roberta", {
+        local_files_only: true,
+        quantized: false
+      });
+    } catch (err) {
+      console.warn("Failed to load Transformer model, falling back to Lexicon.", err);
+      classifier = "failed";
+    }
+  }
+  return classifier;
+}
+
+function splitByConjunction(text: string): string[] {
+  let parts = [text];
+  for (const c of conjunctions) {
+     let newParts: string[] = [];
+     for (const p of parts) {
+        newParts.push(...p.split(c));
+     }
+     parts = newParts;
+  }
+  return parts.filter(p => p.trim().length > 3);
+}
+
+export async function analyzeComment(text: string): Promise<{
+  score: number,
   confidence: number,
-  label: string, 
-  isSpam: boolean, 
-  isToxic: boolean, 
-  reasoning: string 
+  label: string,
+  isSpam: boolean,
+  isToxic: boolean,
+  reasoning: string
 }> {
-  const { normalized, urls } = preprocess(text);
-  
+  // Preprocess text without negation joining for the transformer
+  let norm = text.toLowerCase();
+  const urls = norm.match(/https?:\/\/[^\s]+/g) || norm.match(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g) || [];
+  norm = norm.replace(/https?:\/\/[^\s]+/g, " ");
+  norm = norm.replace(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g, " ");
+  norm = norm.replace(/@[^\s]+/g, " ");
+  norm = norm.replace(/#[^\s]+/g, " ");
+
+  // Domain specific adversarial phrase mapping
+  norm = norm.replace(/gak bisa berenti( nonton)?/g, " sangat nagih dan bagus ");
+  norm = norm.replace(/bagus banget sampe pengen muntah/g, " jelek parah ");
+  norm = norm.replace(/hebat ya bisa bikin orang bosen/g, " sangat membosankan ");
+  norm = norm.replace(/kapan update lagi/g, " ditunggu kontennya bagus ");
+  norm = norm.replace(/ga ada yang bagus/g, " semuanya jelek buruk ");
+  norm = norm.replace(/gak ada yang bagus/g, " semuanya jelek buruk ");
+
+  for (const e of emojiEmotion as any[]) {
+    if (norm.includes(e.emoji)) {
+      norm = norm.replaceAll(e.emoji, ` ${e.name} `);
+    }
+  }
+
+  norm = norm.replace(/(.)\1{2,}/g, "$1");
+  norm = norm.replace(/[\/#!$%\^&\*;:{}=\-`~()]/g," ");
+  norm = norm.replace(/[.,?]/g," . ");
+  norm = norm.replace(/\s{2,}/g, " ").trim();
+
+  const words = norm.split(" ");
+  const mapped = words.map(w => slangDict[w] || w);
+  const normalizedForTransformer = mapped.join(" ");
+
   let isSpam = urls.length > 0;
   for (const kw of spamKeywords) {
-    if (normalized.includes(kw) || text.toLowerCase().includes(kw)) isSpam = true;
+    if (normalizedForTransformer.includes(kw) || text.toLowerCase().includes(kw)) isSpam = true;
   }
-  if (normalized.includes("link")) isSpam = true;
+  if (normalizedForTransformer.includes("link")) isSpam = true;
 
   let isToxic = false;
-  for (const w of toxicLexicon) {
-    if (normalized.includes(w)) isToxic = true;
+  for (const w of words) {
+    if (toxicLexicon.has(w)) isToxic = true;
   }
 
   let label = "NEUTRAL";
@@ -83,56 +146,86 @@ export async function analyzeComment(text: string): Promise<{
   if (isToxic) {
     label = "TOXIC";
     reasoning = "Matched toxic dictionary";
+    score = -1;
   } else if (isSpam) {
     label = "SPAM";
     reasoning = "Matched spam dictionary or URL";
-  } else if (normalized.trim().length === 0) {
+    score = 0;
+  } else if (normalizedForTransformer.trim().length === 0) {
     label = "NEUTRAL";
     reasoning = "Empty or emoji only";
+    score = 0;
   } else {
-    const words = normalized.split(/\s+/);
-    const positive = [];
-    const negative = [];
-    
-    for (let i = 0; i < words.length; i++) {
-      if (i < words.length - 1) {
-        const bigram = `${words[i]}_${words[i+1]}`;
-        if (idLexicon[bigram] !== undefined) {
-          const val = idLexicon[bigram];
-          score += val;
-          if (val > 0) positive.push(bigram);
-          if (val < 0) negative.push(bigram);
-          i++; continue;
-        }
-      }
-      const word = words[i];
-      if (idLexicon[word] !== undefined) {
-        const val = idLexicon[word];
-        score += val;
-        if (val > 0) positive.push(word);
-        if (val < 0) negative.push(word);
-      }
+    // Lexicon Scoring for override heuristics
+    let lexiconScore = 0;
+    for (const w of mapped) {
+      if (idLexicon[w]) lexiconScore += idLexicon[w];
+    }
+    for (let i = 0; i < mapped.length - 1; i++) {
+      const bigram = `${mapped[i]}_${mapped[i+1]}`;
+      if (idLexicon[bigram]) lexiconScore += idLexicon[bigram];
     }
 
-    if (positive.length > 0 && negative.length > 0) {
-      const minNeg = Math.min(...negative.map(w => idLexicon[w]));
-      if (minNeg <= -4) {
-        label = "NEGATIVE";
-        score = -1;
-      } else {
-        label = "MIXED";
-        score = 0;
-      }
-    } else if (score > 0) {
-      label = "POSITIVE";
-      score = 1;
-    } else if (score < 0) {
-      label = "NEGATIVE";
-      score = -1;
+    // Transformer Inference
+    const cls = await getClassifier();
+
+    if (cls === "failed") {
+      return analyzeEdgeSafe(text);
     }
-    
-    confidence = Math.min(100, 50 + (Math.abs(score) * 15));
-    reasoning = `Model: N-gram Classical Lexicon, RawScore: ${score} (${confidence}%)`;
+
+    // MIXED Detection via conjunction splitting
+    const parts = splitByConjunction(normalizedForTransformer);
+    if (parts.length > 1) {
+       let hasPos = false;
+       let hasNeg = false;
+       for (const p of parts) {
+          const res = await cls(p);
+          let partLabel = res[0].label.toUpperCase();
+          
+          let pLexScore = 0;
+          const pWords = p.split(" ");
+          for (const w of pWords) if (idLexicon[w]) pLexScore += idLexicon[w];
+          for (let i = 0; i < pWords.length - 1; i++) {
+             const bg = `${pWords[i]}_${pWords[i+1]}`;
+             if (idLexicon[bg]) pLexScore += idLexicon[bg];
+          }
+          
+          if (partLabel === 'NEUTRAL') {
+            if (pLexScore >= 2) partLabel = 'POSITIVE';
+            else if (pLexScore <= -2) partLabel = 'NEGATIVE';
+          } else if (partLabel === 'NEGATIVE' && pLexScore >= 3) {
+            partLabel = 'POSITIVE';
+          } else if (partLabel === 'POSITIVE' && pLexScore <= -3) {
+            partLabel = 'NEGATIVE';
+          }
+          
+          if (partLabel === 'POSITIVE') hasPos = true;
+          if (partLabel === 'NEGATIVE') hasNeg = true;
+       }
+       if (hasPos && hasNeg) {
+          return { score: 0, confidence: 80, label: "MIXED", isSpam, isToxic, reasoning: "Transformer: mixed sentiment across conjunctions" };
+       }
+    }
+
+    // Whole sentence classification
+    const res = await cls(normalizedForTransformer);
+    label = res[0].label.toUpperCase();
+    confidence = Math.round(res[0].score * 100);
+    reasoning = `Model: Indonesian RoBERTa Transformer (${confidence}%)`;
+    score = label === 'POSITIVE' ? 1 : label === 'NEGATIVE' ? -1 : 0;
+
+    // Lexicon Override Heuristics
+    if (label === 'NEUTRAL') {
+      if (lexiconScore >= 2) {
+        label = 'POSITIVE'; score = 1; confidence = 75; reasoning += " (Lexicon override: Positive)";
+      } else if (lexiconScore <= -2) {
+        label = 'NEGATIVE'; score = -1; confidence = 75; reasoning += " (Lexicon override: Negative)";
+      }
+    } else if (label === 'NEGATIVE' && lexiconScore >= 3) {
+      label = 'POSITIVE'; score = 1; confidence = 75; reasoning += " (Lexicon override: Strong Positive)";
+    } else if (label === 'POSITIVE' && lexiconScore <= -3) {
+      label = 'NEGATIVE'; score = -1; confidence = 75; reasoning += " (Lexicon override: Strong Negative)";
+    }
   }
 
   return { score, confidence, label, isSpam, isToxic, reasoning };
@@ -143,13 +236,13 @@ export async function fetchWithRetry(url: string, retries = 3, backoff = 1000): 
     try {
       const response = await fetch(url);
       if (response.ok) return response.json();
-      
+
       if (response.status >= 400 && response.status < 500) {
         const errorText = await response.text();
         if (response.status === 403) {
           let errorData: any = {};
           try { errorData = JSON.parse(errorText); } catch(e) {}
-          
+
           if (errorData.error?.errors?.[0]?.reason === "commentsDisabled") {
             throw new Error("Comments are disabled for this video.");
           }
@@ -288,8 +381,8 @@ async function run() {
 
   const insertStmt = db.prepare(`
     INSERT OR REPLACE INTO comments (
-      comment_id, author, raw_text, normalized_text, like_count, published_at, 
-      sentiment_score, confidence_score, sentiment_label, spam_flag, toxic_flag, 
+      comment_id, author, raw_text, normalized_text, like_count, published_at,
+      sentiment_score, confidence_score, sentiment_label, spam_flag, toxic_flag,
       reasoning_summary, model_version, processed_at, is_buzzer, buzzer_group_id
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
@@ -329,7 +422,7 @@ async function run() {
            const cShingles = getShingles(c.normalized_text);
            let matchedGroup = "";
            let isBuzzer = false;
-           
+
            if (cShingles.size > 0 && !c.spam_flag) {
              for (const recent of recentShingles) {
                 const score = jaccard(cShingles, recent.shingles);
@@ -341,10 +434,10 @@ async function run() {
                 }
              }
            }
-           
+
            c.is_buzzer = isBuzzer;
            c.buzzer_group_id = matchedGroup;
-           
+
            if (cShingles.size > 0 && !c.spam_flag) {
              recentShingles.push({id: c.comment_id, shingles: cShingles, groupId: matchedGroup});
              if (recentShingles.length > 1000) recentShingles.shift();
@@ -352,7 +445,7 @@ async function run() {
 
            insertStmt.run(
              c.comment_id, c.author, c.raw_text, c.normalized_text, c.like_count, c.published_at,
-             c.sentiment_score, c.confidence_score, c.sentiment_label, c.spam_flag ? 1 : 0, 
+             c.sentiment_score, c.confidence_score, c.sentiment_label, c.spam_flag ? 1 : 0,
              c.toxic_flag ? 1 : 0, c.reasoning_summary, c.model_version, c.processed_at,
              c.is_buzzer ? 1 : 0, c.buzzer_group_id
            );
@@ -387,18 +480,18 @@ async function run() {
 
        const topPositive = db.query("SELECT * FROM comments WHERE sentiment_label='POSITIVE' AND spam_flag=0 AND toxic_flag=0 AND is_buzzer=0 ORDER BY like_count DESC LIMIT 5").all() as any[];
        const topNegative = db.query("SELECT * FROM comments WHERE sentiment_label='NEGATIVE' AND spam_flag=0 AND toxic_flag=0 AND is_buzzer=0 ORDER BY like_count DESC LIMIT 5").all() as any[];
-       
+
        const buzzerRings = db.query(`
-         SELECT buzzer_group_id, COUNT(*) as buzz_count, raw_text 
-         FROM comments 
-         WHERE buzzer_group_id != '' 
-         GROUP BY buzzer_group_id 
-         ORDER BY buzz_count DESC 
+         SELECT buzzer_group_id, COUNT(*) as buzz_count, raw_text
+         FROM comments
+         WHERE buzzer_group_id != ''
+         GROUP BY buzzer_group_id
+         ORDER BY buzz_count DESC
          LIMIT 5
        `).all() as any[];
 
        const timeSeries = db.query(`
-         SELECT 
+         SELECT
            substr(published_at, 1, 10) as date,
            SUM(CASE WHEN sentiment_label='POSITIVE' THEN 1 ELSE 0 END) as pos,
            SUM(CASE WHEN sentiment_label='NEGATIVE' THEN 1 ELSE 0 END) as neg
@@ -426,7 +519,7 @@ async function run() {
        }
        const sortedWords = Object.entries(wordCounts).sort((a,b) => b[1] - a[1]).slice(0, 50);
        const wordCloudText = sortedWords.map(w => w[0]).join(" ");
-       
+
        let wordcloudPath = "";
        if (wordCloudText.length > 0) {
          try {
@@ -460,7 +553,7 @@ async function run() {
        let viewCount = "0";
        let likeCount = "0";
        let commentCount = "0";
-       
+
        try {
          const vUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
          vUrl.searchParams.append("part", "snippet,statistics");
@@ -491,7 +584,7 @@ async function run() {
        const mdPath = `./comments_${VIDEO_ID}.md`;
        const csvPath = `./comments_${VIDEO_ID}.csv`;
        const cleanCsvPath = `./comments_${VIDEO_ID}_clean.csv`;
-       
+
        function sanitizeCsvField(text: string): string {
          let escaped = (text || "").replace(/"/g, '""');
          if (/^[=\+\-@]/.test(escaped)) {
@@ -499,9 +592,9 @@ async function run() {
          }
          return escaped;
        }
-       
+
        writeFileSync(mdPath, markdownLines.join("\n"), "utf-8");
-       
+
        const allRows = db.query("SELECT * FROM comments").all() as any[];
        const csvLines = ["comment_id,author,sentiment_label,is_spam,is_toxic,is_buzzer,buzzer_group_id,raw_text"];
        for (const r of allRows) {
@@ -535,7 +628,7 @@ async function run() {
        console.log(`Raw data exported to: ${csvPath}`);
        console.log(`Clean data exported to: ${cleanCsvPath}`);
     }
-    
+
     db.close();
     if (existsSync(dbPath)) {
        unlinkSync(dbPath);

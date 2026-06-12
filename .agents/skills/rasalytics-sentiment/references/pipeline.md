@@ -20,18 +20,19 @@ unchecked items. Do not use them alone to determine current behavior.
 ## Processing Order
 
 1. `preprocess(text)` lowercases text, records and removes URLs, strips mentions
-   and hashtags, converts known emoji to names, joins Indonesian negations,
-   reduces repeated characters, removes punctuation, and maps slang.
-2. `analyzeComment(text)` detects spam and toxic terms.
-3. Toxicity is terminal before spam. Empty normalized text becomes `NEUTRAL`.
-4. `franc-min` selects the English or multilingual transformer path.
-5. Text is split into non-trivial period-delimited chunks and classified.
-6. Confidence is the mean transformer confidence, expressed as `0..100`.
-7. Below 60% confidence, the local `sentiment` package plus `idLexicon` may
-   adjust the aggregate direction.
-8. Positive and negative chunks together produce `MIXED`; otherwise aggregate
-   direction produces `POSITIVE`, `NEGATIVE`, or `NEUTRAL`.
-9. `processComment` optionally asks local Ollama `qwen2.5:1.5b` to verify
+   and hashtags, converts known emoji to names, reduces repeated characters,
+   removes punctuation, and maps slang using `slangDict`.
+2. `analyzeComment(text)` detects spam and toxic terms first (lexicon).
+   Toxicity is terminal before spam. Empty normalized text becomes `NEUTRAL`.
+3. If not matched above, the text is passed to the `Indonesian-RoBERTa`
+   transformer via `@xenova/transformers`.
+4. For `MIXED` detection, the text is split by conjunctions. If the model
+   detects both `POSITIVE` and `NEGATIVE` segments, it returns `MIXED`.
+5. For standard classification, the model returns `POSITIVE` or `NEGATIVE` or `NEUTRAL`.
+6. A **Lexicon Override Heuristic** adjusts the transformer prediction if the
+   n-gram lexicon score is extremely strong in the opposite direction or resolves `NEUTRAL`
+   ambiguity.
+7. `processComment` optionally asks local Ollama `qwen2.5:1.5b` to verify
    non-spam, non-toxic, non-empty comments. Failure or unrecognized output keeps
    the existing label.
 
@@ -41,22 +42,21 @@ test.
 
 ## Runtime Models
 
-- English: `Xenova/distilbert-base-uncased-finetuned-sst-2-english`
-- Other detected languages: `Xenova/bert-base-multilingual-uncased-sentiment`
-- Low-confidence fallback: `sentiment` with `idLexicon`
+- Indonesian Transformer: `local_models/indonesian-roberta`
+- Heuristic Fallbacks: `lexicons.ts` + `sentiment` package (used in edge worker)
 - Optional verifier: local Ollama `qwen2.5:1.5b`
 
 Classifiers are lazily initialized and reused. `env.localModelPath` points at
-`./local_models`, while `env.allowRemoteModels` is enabled. Do not assume a
-folder name under `local_models/` proves which runtime model ID is loaded.
+`./local_models`, while `env.allowRemoteModels` is disabled to ensure offline-only
+execution.
 
 ## Labels and Scores
 
 | Label | Score | Meaning |
 |---|---:|---|
-| `POSITIVE` | `1` | Positive aggregate |
-| `NEGATIVE` | `-1` | Negative aggregate |
-| `NEUTRAL` | `0` | Neutral or empty aggregate |
+| `POSITIVE` | `1` | Positive transformer or lexicon aggregate |
+| `NEGATIVE` | `-1` | Negative transformer or lexicon aggregate |
+| `NEUTRAL` | `0` | Neutral transformer or empty text |
 | `MIXED` | `0` | Both positive and negative chunks |
 | `SPAM` | `0` | URL or spam-keyword match |
 | `TOXIC` | `0` | Toxic lexicon match |

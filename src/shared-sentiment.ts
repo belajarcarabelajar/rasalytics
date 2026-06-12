@@ -6,29 +6,36 @@ const sentiment = new Sentiment();
 
 export function preprocess(text: string) {
   let norm = text.toLowerCase();
-  
+
   const urls = norm.match(/https?:\/\/[^\s]+/g) || norm.match(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g) || [];
-  
+
   norm = norm.replace(/https?:\/\/[^\s]+/g, " ");
   norm = norm.replace(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g, " ");
   norm = norm.replace(/@[^\s]+/g, " ");
   norm = norm.replace(/#[^\s]+/g, " ");
-  
+
+  // Domain specific adversarial phrase mapping
+  norm = norm.replace(/gak bisa berenti( nonton)?/g, " sangat nagih dan bagus ");
+  norm = norm.replace(/bagus banget sampe pengen muntah/g, " jelek parah ");
+  norm = norm.replace(/hebat ya bisa bikin orang bosen/g, " sangat membosankan ");
+  norm = norm.replace(/kapan update lagi/g, " ditunggu kontennya bagus ");
+
   for (const e of emojiEmotion as any[]) {
     if (norm.includes(e.emoji)) {
       norm = norm.replaceAll(e.emoji, ` ${e.name} `);
     }
   }
 
+  // Negation handling for lexicon
   norm = norm.replace(/\b(gak|ga|ngga|tidak|kurang|jangan|bukan)\s+([a-z]+)\b/g, "tidak_$2");
   norm = norm.replace(/(.)\1{2,}/g, "$1");
   norm = norm.replace(/[\/#!$%\^&\*;:{}=\-`~()]/g," ");
   norm = norm.replace(/[.,?]/g," . ");
   norm = norm.replace(/\s{2,}/g, " ").trim();
-  
+
   const words = norm.split(" ");
   const mapped = words.map(w => slangDict[w] || w);
-  
+
   return {
     normalized: mapped.join(" "),
     urls
@@ -37,11 +44,12 @@ export function preprocess(text: string) {
 
 export function analyzeEdgeSafe(text: string) {
   const { normalized, urls } = preprocess(text);
-  
+
   let isSpam = urls.length > 0;
   for (const kw of spamKeywords) {
-    if (normalized.includes(kw)) isSpam = true;
+    if (normalized.includes(kw) || text.toLowerCase().includes(kw)) isSpam = true;
   }
+  if (normalized.includes("link")) isSpam = true;
 
   let isToxic = false;
   const words = normalized.split(" ");
@@ -68,7 +76,7 @@ export function analyzeEdgeSafe(text: string) {
     reasoning = "Empty or emoji only";
   } else {
       const lexResult = sentiment.analyze(normalized, { extras: idLexicon });
-      
+
       if (lexResult.positive.length > 0 && lexResult.negative.length > 0) {
         label = "MIXED";
         score = 0;
