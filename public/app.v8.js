@@ -2,6 +2,79 @@ const WORKER_URL = window.location.hostname === 'localhost' || window.location.h
   ? 'http://127.0.0.1:8787' 
   : 'https://rasalytics-api.kurniawaniwan7906.workers.dev';
 
+// EXPORT HELPERS (Exposed for Testing)
+window.RasalyticsExportHelpers = {
+  escapeCsv: function(value) {
+    if (value === null || value === undefined) return '';
+    let str = String(value);
+    if (/^[=+\-@]/.test(str)) {
+      str = "'" + str; // Prevent formula injection
+    }
+    // Always enclose in quotes for robust parsing, and escape inner quotes
+    return '"' + str.replace(/"/g, '""') + '"';
+  },
+  generateReportMarkdown: function(data) {
+    const v = data.videoDetails;
+    let md = `# Analysis Report: ${v?.title || 'Unknown Video'}\n\n`;
+    
+    md += `## Video Meta Information\n`;
+    md += `- **Channel**: ${v?.channel || 'Unknown'}\n`;
+    md += `- **Views**: ${(v?.views || 0).toLocaleString()}\n`;
+    md += `- **Likes**: ${(v?.likes || 0).toLocaleString()}\n`;
+    md += `- **Comments Analysed**: ${(v?.commentCount || 0).toLocaleString()}\n\n`;
+
+    md += `## Summary Dashboard\n`;
+    md += `- **Total Analyzed**: ${(data.total || 0).toLocaleString()}\n`;
+    md += `- **Toxicity**: ${(data.toxic || 0).toLocaleString()}\n`;
+    md += `- **Spam Flag**: ${(data.spam || 0).toLocaleString()}\n\n`;
+
+    md += `### Sentiment Distribution\n`;
+    md += `- **Positive**: ${data.positive}\n`;
+    md += `- **Neutral**: ${data.neutral}\n`;
+    md += `- **Mixed**: ${data.mixed || 0}\n`;
+    md += `- **Negative**: ${data.negative}\n\n`;
+
+    if (data.topPositive && data.topPositive.length > 0) {
+      md += `## Top Positive Comments\n`;
+      data.topPositive.forEach(c => {
+        md += `> **@${c.author}** [${c.sentiment}] (${c.confidence}%)\n`;
+        md += `> ${c.text.replace(/\n/g, '\n> ')}\n\n`;
+      });
+    }
+
+    if (data.topNegative && data.topNegative.length > 0) {
+      md += `## Top Negative Comments\n`;
+      data.topNegative.forEach(c => {
+        md += `> **@${c.author}** [${c.sentiment}] (${c.confidence}%)\n`;
+        md += `> ${c.text.replace(/\n/g, '\n> ')}\n\n`;
+      });
+    }
+
+    if (data.timeSeries && data.timeSeries.length > 0) {
+      md += `## Sentiment Over Time\n`;
+      md += `| Date | Positive | Negative |\n| --- | --- | --- |\n`;
+      data.timeSeries.forEach(ts => {
+        md += `| ${ts.date} | ${ts.pos} | ${ts.neg} |\n`;
+      });
+      md += `\n`;
+    }
+
+    md += `## Buzzer Forensics\n`;
+    md += `- **Total Buzzer/Copas**: ${(data.buzzer || 0).toLocaleString()}\n\n`;
+    
+    if (data.buzzerRings && data.buzzerRings.length > 0) {
+      md += `### Significant Buzzer Activity (Rings)\n`;
+      data.buzzerRings.forEach(r => {
+        md += `**Ring Size: ${r.count + 1}** (ID: ${r.id.substring(0,8)})\n`;
+        md += `> ${r.text.replace(/\n/g, '\n> ')}\n\n`;
+      });
+    }
+
+    md += `---\n*Exported from Rasalytics Web UI*\n`;
+    return md;
+  }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
   const analyzeVideoBtn = document.getElementById('analyzeVideoBtn');
   const videoInput = document.getElementById('videoInput');
@@ -12,6 +85,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const emptyState = document.getElementById('emptyState');
   const loadingState = document.getElementById('loadingState');
   const videoResultsSection = document.getElementById('videoResultsSection');
+
+  function escapeHTML(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/[&<>"']/g, function(match) {
+      const escape = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      };
+      return escape[match];
+    });
+  }
 
   // Sync Slider
   pagesInput.addEventListener('input', (e) => {
@@ -163,13 +250,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
           el.innerHTML = `
             <div class="comment-header">
-              <span class="comment-author">${c.author.startsWith('@') ? '' : '@'}${c.author}</span>
+              <span class="comment-author">${escapeHTML(c.author).startsWith('@') ? '' : '@'}${escapeHTML(c.author)}</span>
               <div class="comment-stats">
-                <span style="color: ${sentColor}; font-weight: 700;" title="Reasoning: ${c.reasoning || ''}">[${c.sentiment}] (${c.confidence || 0}%)</span>
+                <span style="color: ${sentColor}; font-weight: 700;" title="Reasoning: ${escapeHTML(c.reasoning || '')}">[${c.sentiment}] (${c.confidence || 0}%)</span>
                 <span>♥ ${c.likes}</span>
               </div>
             </div>
-            <div class="comment-text">${c.text}</div>
+            <div class="comment-text">${escapeHTML(c.text)}</div>
           `;
           list.appendChild(el);
         });
@@ -195,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="comment-author" style="color: var(--neg);">Ring Size: ${r.count + 1}</span>
               <span class="comment-stats">ID: ${r.id.substring(0,8)}</span>
             </div>
-            <div class="comment-text">${r.text}</div>
+            <div class="comment-text">${escapeHTML(r.text)}</div>
           `;
           buzzerList.appendChild(el);
       });
@@ -352,29 +439,47 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('exportCsvBtn')?.addEventListener('click', () => {
     const data = window._latestAnalyzeData;
     if(!data || !data.allComments) return;
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "id,author,sentiment,isSpam,isToxic,isBuzzer,buzzerGroup,text\n"
-      + data.allComments.map(c => `"${c.id || ''}","${c.author}","${c.sentiment}",${c.isSpam ? 1 : 0},${c.isToxic ? 1 : 0},${c.isBuzzer ? 1 : 0},"${c.buzzerGroup || ''}","${c.text.replace(/"/g, '""')}"`).join("\n");
-    const encodedUri = encodeURI(csvContent);
+    
+    const escapeCsv = window.RasalyticsExportHelpers.escapeCsv;
+    const header = "id,author,sentiment,isSpam,isToxic,isBuzzer,buzzerGroup,text\n";
+    const rows = data.allComments.map(c => {
+      return [
+        escapeCsv(c.id),
+        escapeCsv(c.author),
+        escapeCsv(c.sentiment),
+        c.isSpam ? 1 : 0,
+        c.isToxic ? 1 : 0,
+        c.isBuzzer ? 1 : 0,
+        escapeCsv(c.buzzerGroup),
+        escapeCsv(c.text)
+      ].join(",");
+    }).join("\n");
+    
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]); // UTF-8 BOM
+    const blob = new Blob([bom, header + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `rasalytics_${data.videoDetails?.title}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `rasalytics_${data.videoDetails?.title || 'export'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   });
 
   document.getElementById('exportReportBtn')?.addEventListener('click', () => {
     const data = window._latestAnalyzeData;
     if(!data) return;
-    const mdContent = `# Analysis Report: ${data.videoDetails?.title}\n\nTotal: ${data.total}\nPositive: ${data.positive}\nNegative: ${data.negative}\nNeutral: ${data.neutral}\nMixed: ${data.mixed}\nSpam: ${data.spam}\nToxic: ${data.toxic}\nBuzzer: ${data.buzzer}\n\n*Exported from Rasalytics Web UI*`;
+    
+    const mdContent = window.RasalyticsExportHelpers.generateReportMarkdown(data);
     const blob = new Blob([mdContent], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `report_${data.videoDetails?.title}.md`);
+    link.setAttribute("download", `report_${data.videoDetails?.title || 'export'}.md`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   });
 });

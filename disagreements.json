@@ -1,0 +1,142 @@
+[
+  {
+    "text": "Luar biasa, ditunggu konten selanjutnya!",
+    "expected": "POSITIVE",
+    "predicted": "NEGATIVE",
+    "confidence": 38,
+    "reasoning": "Lang: ind, Model: BERT-Multilingual, Score: -1.00 (38%)"
+  },
+  {
+    "text": "Bagus banget sampe pengen muntah",
+    "expected": "MIXED",
+    "predicted": "NEGATIVE",
+    "confidence": 45,
+    "reasoning": "Lang: ind, Model: BERT-Multilingual, Score: -1.00 (45%)"
+  },
+  {
+    "text": "Kualitas bagus tapi harganya mahal banget",
+    "expected": "MIXED",
+    "predicted": "POSITIVE",
+    "confidence": 46,
+    "reasoning": "Lang: ind, Model: BERT-Multilingual + LexOverride(Pos), Score: 1.00 (46%)"
+  },
+  {
+    "text": "Suka sih sama videonya, tapi kenapa suaranya kecil amat",
+    "expected": "MIXED",
+    "predicted": "POSITIVE",
+    "confidence": 42,
+    "reasoning": "Lang: zlm, Model: BERT-Multilingual + LexOverride(Pos), Score: 2.00 (42%)"
+  },
+  {
+    "text": "Keren tapi ngeselin",
+    "expected": "MIXED",
+    "predicted": "POSITIVE",
+    "confidence": 34,
+    "reasoning": "Lang: ilo, Model: BERT-Multilingual + Lex(Pos), Score: 1.00 (34%)"
+  },
+  {
+    "text": "Konten sampah!",
+    "expected": "NEGATIVE",
+    "predicted": "TOXIC",
+    "confidence": 100,
+    "reasoning": "Matched toxic dictionary"
+  },
+  {
+    "text": "Saya sedang menonton video ini",
+    "expected": "NEUTRAL",
+    "predicted": "POSITIVE",
+    "confidence": 26,
+    "reasoning": "Lang: ind, Model: BERT-Multilingual, Score: 1.00 (26%)"
+  },
+  {
+    "text": "Durasi videonya 10 menit",
+    "expected": "NEUTRAL",
+    "predicted": "NEGATIVE",
+    "confidence": 30,
+    "reasoning": "Lang: ind, Model: BERT-Multilingual, Score: -1.00 (30%)"
+  },
+  {
+    "text": "Dia memakai baju merah",
+    "expected": "NEUTRAL",
+    "predicted": "NEGATIVE",
+    "confidence": 28,
+    "reasoning": "Lang: zlm, Model: BERT-Multilingual, Score: -1.00 (28%)"
+  },
+  {
+    "text": "Tadi jam 8 malam aku buka youtube",
+    "expected": "NEUTRAL",
+    "predicted": "NEGATIVE",
+    "confidence": 59,
+    "reasoning": "Lang: ind, Model: BERT-Multilingual, Score: -1.00 (59%)"
+  },
+  {
+    "text": "Video ini diunggah tahun 2023",
+    "expected": "NEUTRAL",
+    "predicted": "NEGATIVE",
+    "confidence": 36,
+    "reasoning": "Lang: ita, Model: BERT-Multilingual, Score: -1.00 (36%)"
+  },
+  {
+    "text": "Kamera apa yang dipake?",
+    "expected": "NEUTRAL",
+    "predicted": "POSITIVE",
+    "confidence": 43,
+    "reasoning": "Lang: jav, Model: BERT-Multilingual, Score: 1.00 (43%)"
+  },
+  {
+    "text": "Menyimak dari bali",
+    "expected": "NEUTRAL",
+    "predicted": "NEGATIVE",
+    "confidence": 26,
+    "reasoning": "Lang: ind, Model: BERT-Multilingual, Score: -1.00 (26%)"
+  },
+  {
+    "text": "Keren sih, tapi kurang panjang durasinya",
+    "expected": "MIXED",
+    "predicted": "POSITIVE",
+    "confidence": 41,
+    "reasoning": "Lang: jav, Model: BERT-Multilingual + LexOverride(Pos), Score: 1.00 (41%)"
+  },
+  {
+    "text": "Bagus, tapi saya benci bagian akhirnya",
+    "expected": "MIXED",
+    "predicted": "NEGATIVE",
+    "confidence": 30,
+    "reasoning": "Lang: zlm, Model: BERT-Multilingual + Lex(Neg), Score: -1.00 (30%)"
+  },
+  {
+    "text": "Lucu tapi garing",
+    "expected": "MIXED",
+    "predicted": "POSITIVE",
+    "confidence": 45,
+    "reasoning": "Lang: qug, Model: BERT-Multilingual + Lex(Pos), Score: 1.00 (45%)"
+  },
+  {
+    "text": "Luar biasa mas",
+    "expected": "POSITIVE",
+    "predicted": "NEUTRAL",
+    "confidence": 36,
+    "reasoning": "Lang: azj, Model: BERT-Multilingual, Score: 0.00 (36%)"
+  },
+  {
+    "text": "Ini video tentang apa?",
+    "expected": "NEUTRAL",
+    "predicted": "POSITIVE",
+    "confidence": 32,
+    "reasoning": "Lang: zlm, Model: BERT-Multilingual, Score: 1.00 (32%)"
+  },
+  {
+    "text": "Hehe",
+    "expected": "NEUTRAL",
+    "predicted": "POSITIVE",
+    "confidence": 25,
+    "reasoning": "Lang: und, Model: BERT-Multilingual + LexOverride(Pos), Score: 1.00 (25%)"
+  },
+  {
+    "text": "Lumayan lah buat pemula",
+    "expected": "POSITIVE",
+    "predicted": "NEGATIVE",
+    "confidence": 36,
+    "reasoning": "Lang: zlm, Model: BERT-Multilingual, Score: -1.00 (36%)"
+  }
+]
