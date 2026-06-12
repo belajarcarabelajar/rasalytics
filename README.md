@@ -132,16 +132,26 @@ Full markdown report saved to: /mnt/c/Users/Tedi Rahmat/Downloads/comments_5bKxk
 ```text
 rasalytics/
 ├── src/
-│   ├── index.ts           # Main scraper and analyzer script
-│   ├── index.test.ts      # Test suite for sentiment and scraping logic
-│   └── lexicons.ts        # Indonesian slang, toxic, and positive/negative lexicons
-├── docs/                  # API, architecture, and Claude documentation
-├── audit-reports/         # Production-readiness audit reports and findings
-├── package.json           # Dependencies and scripts
-├── tsconfig.json          # TypeScript configuration
-├── bun.lock               # Bun lockfile
-├── .env                   # Environment variables (API Key)
-└── local_models/          # Cached transformer models
+│   ├── index.ts                 # Main scraper and analyzer CLI script
+│   ├── index.test.ts            # Test suite for sentiment and scraping logic
+│   ├── eval.test.ts             # Evaluation tests for sentiment accuracy
+│   ├── lexicons.ts              # Indonesian slang, toxic, and positive/negative lexicons
+│   ├── worker.ts                # Cloudflare Worker backend API
+│   └── shared-sentiment.ts      # Edge-safe sentiment logic for the backend
+├── scripts/
+│   ├── deploy-website.sh        # Deployment script for Cloudflare Worker and Pages
+│   └── setup-skills.ts          # Setup script for AI agents skills
+├── public/                      # Static frontend assets for Cloudflare Pages
+├── docs/                        # API, architecture, and Claude documentation
+├── audit-reports/               # Production-readiness audit reports and findings
+├── package.json                 # Dependencies and scripts
+├── tsconfig.json                # TypeScript configuration
+├── bun.lock                     # Bun lockfile
+├── .env                         # Environment variables (API Key)
+├── local_models/                # Cached transformer models
+├── analyze_offline.ts           # Offline comment analysis tool
+├── evaluate_baseline.ts         # Sentiment baseline evaluator
+└── fix_benchmark.ts             # Benchmark data fixer
 ```
 
 ## Contributing
