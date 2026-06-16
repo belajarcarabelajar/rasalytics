@@ -55,7 +55,7 @@ export default {
         const parsedBody = AnalyzeVideoSchema.safeParse(jsonBody);
         
         if (!parsedBody.success) {
-          const errorMessage = parsedBody.error.errors.map(e => e.message).join(", ");
+          const errorMessage = parsedBody.error.issues.map(e => e.message).join(", ");
           return new Response(JSON.stringify({ error: errorMessage }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
         }
         
