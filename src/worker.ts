@@ -23,9 +23,10 @@ const ALLOWED_ORIGINS = new Set([
 export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
     const url = new URL(request.url);
+    const origin = request.headers.get("Origin") || "";
     
     let allowOrigin = "https://rasalytics.pages.dev";
-    if (ALLOWED_ORIGINS.has(origin)) {
+    if (ALLOWED_ORIGINS.has(origin) || origin.endsWith(".pages.dev")) {
       allowOrigin = origin;
     }
     
