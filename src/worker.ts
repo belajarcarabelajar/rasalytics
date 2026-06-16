@@ -1,44 +1,31 @@
 import { analyzeEdgeSafe, preprocess } from "./shared-sentiment.js";
+import { getShingles, jaccard } from "./forensics.js";
 
-function getShingles(text: string, k = 2): Set<string> {
-  const words = text.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-  const shingles = new Set<string>();
-  if (words.length < k) {
-    if (words.length > 0) shingles.add(words.join(" "));
-    return shingles;
-  }
-  for (let i = 0; i <= words.length - k; i++) {
-    shingles.add(words.slice(i, i + k).join(" "));
-  }
-  return shingles;
-}
-
-function jaccard(setA: Set<string>, setB: Set<string>) {
-  if (setA.size === 0 && setB.size === 0) return 0;
-  let intersection = 0;
-  for (const elem of setB) {
-    if (setA.has(elem)) intersection++;
-  }
-  const union = setA.size + setB.size - intersection;
-  return union === 0 ? 0 : intersection / union;
-}
+import { z } from "zod";
 
 interface Env {
   YOUTUBE_API_KEY?: string;
 }
 
+const AnalyzeVideoSchema = z.object({
+  videoId: z.string().min(1, "Missing videoId"),
+  maxPages: z.number().int().min(1).max(10).optional().default(1)
+});
+
+// Cache global allowed origins
+const ALLOWED_ORIGINS = new Set([
+  "http://localhost:8787", "http://127.0.0.1:8787", 
+  "http://localhost:3000", "http://127.0.0.1:3000",
+  "https://rasalytics.belajarcarabelajar.com",
+  "https://rasalytics.pages.dev"
+]);
+
 export default {
   async fetch(request: Request, env: Env, ctx: any): Promise<Response> {
     const url = new URL(request.url);
     
-    const origin = request.headers.get("Origin") || "";
-    const allowedOrigins = [
-      "http://localhost:8787", "http://127.0.0.1:8787", 
-      "http://localhost:3000", "http://127.0.0.1:3000",
-      "https://rasalytics.belajarcarabelajar.com"
-    ];
-    let allowOrigin = "https://rasalytics.belajarcarabelajar.com";
-    if (allowedOrigins.includes(origin) || origin.endsWith(".pages.dev")) {
+    let allowOrigin = "https://rasalytics.pages.dev";
+    if (ALLOWED_ORIGINS.has(origin)) {
       allowOrigin = origin;
     }
     
@@ -63,15 +50,21 @@ export default {
 
     if (url.pathname === "/api/analyze-video" && request.method === "POST") {
       try {
-        const body = await request.json() as { videoId?: string; maxPages?: number };
-        if (!body.videoId) {
-          return new Response(JSON.stringify({ error: "Missing videoId" }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
+        const jsonBody = await request.json();
+        const parsedBody = AnalyzeVideoSchema.safeParse(jsonBody);
+        
+        if (!parsedBody.success) {
+          const errorMessage = parsedBody.error.errors.map(e => e.message).join(", ");
+          return new Response(JSON.stringify({ error: errorMessage }), { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } });
         }
+        
+        const body = parsedBody.data;
+
         if (!env.YOUTUBE_API_KEY) {
           return new Response(JSON.stringify({ error: "YOUTUBE_API_KEY not configured on server" }), { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } });
         }
 
-        const maxPages = body.maxPages || 1;
+        const maxPages = body.maxPages;
         const apiKey = env.YOUTUBE_API_KEY;
         const videoId = body.videoId;
 
@@ -101,7 +94,9 @@ export default {
               };
             }
           }
-        } catch (e) {}
+        } catch (e: any) {
+          console.error("Error fetching video details:", e.message || e);
+        }
 
         // 2. Fetch Comments (Pagination & Replies)
         let allComments: any[] = [];
@@ -299,6 +294,7 @@ export default {
         
         return new Response(JSON.stringify({
            videoDetails,
+           hasMore: subrequestCount >= MAX_SUBREQUESTS,
            total, positive, negative, neutral, mixed, spam, toxic, buzzer,
            topPositive,
            topNegative,
@@ -310,6 +306,7 @@ export default {
         });
 
       } catch (err: any) {
+        console.error("Worker error handling /api/analyze-video:", err);
         return new Response(JSON.stringify({ error: err.message || "Internal Server Error" }), {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
