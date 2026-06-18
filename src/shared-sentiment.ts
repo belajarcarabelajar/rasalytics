@@ -1,8 +1,23 @@
-import Sentiment from "sentiment";
 import { emojiEmotion } from "emoji-emotion";
 import { idLexicon, toxicLexicon, slangDict, spamKeywords } from "./lexicons.js";
 
-const sentiment = new Sentiment();
+function analyzeWithLexicon(text: string, lexicon: Record<string, number>) {
+  const words = text.split(/\s+/);
+  const positive: string[] = [];
+  const negative: string[] = [];
+  let score = 0;
+
+  for (const word of words) {
+    if (Object.prototype.hasOwnProperty.call(lexicon, word)) {
+      const val = lexicon[word];
+      score += val;
+      if (val > 0) positive.push(word);
+      if (val < 0) negative.push(word);
+    }
+  }
+
+  return { score, positive, negative };
+}
 
 export function preprocess(text: string) {
   let norm = text.toLowerCase();
@@ -75,7 +90,7 @@ export function analyzeEdgeSafe(text: string) {
     confidence = 100;
     reasoning = "Empty or emoji only";
   } else {
-      const lexResult = sentiment.analyze(normalized, { extras: idLexicon });
+      const lexResult = analyzeWithLexicon(normalized, idLexicon);
 
       if (lexResult.positive.length > 0 && lexResult.negative.length > 0) {
         label = "MIXED";
