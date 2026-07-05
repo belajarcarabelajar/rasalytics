@@ -1,0 +1,12 @@
+{
+  "name": "@rasalytics/worker",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@rasalytics/sentiment-core": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "wrangler": "^4.100.0"
+  }
+}

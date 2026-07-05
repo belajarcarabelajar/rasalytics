@@ -1,0 +1,15 @@
+{
+  "name": "@rasalytics/web",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "deploy:website": "bash deploy-website.sh",
+    "dev:website": "bunx serve public",
+    "lint:html": "markuplint public/index.html",
+    "lint:seo": "bun run seo-lint.js"
+  },
+  "devDependencies": {
+    "@markuplint/html-spec": "^4.18.0",
+    "markuplint": "^4.18.3"
+  }
+}

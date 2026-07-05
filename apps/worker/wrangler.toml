@@ -1,0 +1,15 @@
+name = "rasalytics-api"
+main = "worker.ts"
+compatibility_date = "2026-06-24"
+
+# The Worker environment variables.
+# For production secrets, use `wrangler secret put <NAME>` instead.
+[vars]
+ENVIRONMENT = "production"
+
+
+
+logpush = true
+
+[observability]
+enabled = true

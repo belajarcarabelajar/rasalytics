@@ -1,0 +1,11 @@
+{
+  "name": "@rasalytics/cli",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": {
+    "rasalytics-cli": "./src/cli.ts"
+  },
+  "dependencies": {
+    "@rasalytics/sentiment-core": "workspace:*"
+  }
+}
