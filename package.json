@@ -1,16 +1,21 @@
 {
   "name": "rasalytics",
   "version": "1.0.0",
-  "module": "src/index.ts",
+  "module": "packages/sentiment-core/src/index.ts",
   "type": "module",
   "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "tools/*"
+  ],
   "scripts": {
-    "setup:skills": "bun run scripts/setup-skills.ts",
-    "deploy:website": "bash scripts/deploy-website.sh",
-    "dev:worker": "wrangler dev src/worker.ts",
-    "dev:website": "bunx serve public",
-    "lint:html": "markuplint public/index.html",
-    "lint:seo": "bun run scripts/seo-lint.js",
+    "setup:skills": "bun run tools/scripts/setup-skills.ts",
+    "deploy:website": "bash apps/web/deploy-website.sh",
+    "dev:worker": "wrangler dev apps/worker/worker.ts",
+    "dev:website": "bunx serve apps/web/public",
+    "lint:html": "markuplint apps/web/public/index.html",
+    "lint:seo": "bun run apps/web/seo-lint.js",
     "test": "bun test"
   },
   "devDependencies": {
@@ -34,11 +39,12 @@
     "franc-min": "^6.2.0",
     "natural": "^8.1.1",
     "sentiment": "^5.0.2",
-    "sharp": "^0.35.1",
+    "sharp": "^0.35.3",
     "zod": "^4.4.3"
   },
   "trustedDependencies": [
-    "protobufjs"
+    "protobufjs",
+    "sharp"
   ],
   "overrides": {
     "protobufjs": ">=7.3.0",

@@ -35,4 +35,12 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # large files
 local_models/
+models/
 *.csv
+
+# printdirtree generated report
+dirtree-report.md
+
+# artifacts
+.artifacts/
+
