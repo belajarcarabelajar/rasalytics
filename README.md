@@ -18,7 +18,7 @@ Analyzing YouTube comments manually can be overwhelming, especially for videos w
 
 While sentiment analysis is heavily utilized in the corporate world for brand monitoring and market research, **this repository is built upon a radically different philosophy: democratizing data for political transparency and social accountability.** 
 
-In the modern digital era—where algorithms curate echo chambers and public opinion is easily manipulated—open-source analytical tools must step up to serve the broader society. Our mission focuses on the following pillars:
+In the modern digital era, where algorithms curate echo chambers and public opinion is easily manipulated, open-source analytical tools must step up to serve the broader society. Our mission focuses on the following pillars:
 
 1. **Defending Digital Democracy & Transparency**
    Political discourse on platforms like YouTube is often obscured by algorithmic bias, making it difficult to gauge true public sentiment. This tool empowers citizens, independent journalists, and researchers to bypass "filter bubbles" and transparently audit how political campaigns, policies, or figures are actually being received by the public.
