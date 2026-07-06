@@ -6,14 +6,17 @@ on:
   pull_request:
     branches: [ master, main ]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Run Tests & Coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d93d129bcbf406c551c7ec557598c129 # v4
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@a65a322a63ef0f9ab4ee9a690e8d022b7245903b # v1
         with:
           bun-version: latest
       - name: Install dependencies

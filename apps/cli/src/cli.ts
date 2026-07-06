@@ -145,6 +145,9 @@ async function collectComments(videoId: string, maxPages: number, db: Database) 
 }
 
 async function exportOutputs(videoId: string, db: Database) {
+  if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+    throw new Error("Invalid videoId");
+  }
   const totalCount = (db.query("SELECT COUNT(*) as count FROM comments").get() as any).count;
   if (totalCount === 0) return;
 
@@ -318,12 +321,16 @@ async function run() {
     console.error("Error: --videoId is required.");
     process.exit(1);
   }
+  const VIDEO_ID = values.videoId as string;
+  if (!/^[a-zA-Z0-9_-]{11}$/.test(VIDEO_ID)) {
+    console.error("Invalid videoId");
+    process.exit(1);
+  }
   if (!API_KEY) {
     console.error("Error: YOUTUBE_API_KEY is not set in .env");
     process.exit(1);
   }
 
-  const VIDEO_ID = values.videoId as string;
   const MAX_PAGES = parseInt(values.maxPages as string, 10);
   console.log(`Starting comment collection for Video ID: ${VIDEO_ID}...`);
 

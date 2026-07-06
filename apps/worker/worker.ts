@@ -12,6 +12,7 @@ const AnalyzeVideoSchema = z.object({
 });
 
 // Cache global allowed origins
+const ALLOWED_PAGES_SUFFIX = ".rasalytics.pages.dev";
 const ALLOWED_ORIGINS = new Set([
   "http://localhost:8787",
   "http://127.0.0.1:8787",
@@ -27,7 +28,7 @@ export default {
     const origin = request.headers.get("Origin") || "";
 
     let allowOrigin = "https://rasalytics.pages.dev";
-    if (ALLOWED_ORIGINS.has(origin) || origin.endsWith(".pages.dev")) {
+    if (ALLOWED_ORIGINS.has(origin) || origin.endsWith(ALLOWED_PAGES_SUFFIX)) {
       allowOrigin = origin;
     }
 
@@ -134,7 +135,8 @@ export default {
           if (!response.ok) {
             if (pageCount === 0) {
               const errText = await response.text();
-              return new Response(JSON.stringify({ error: "YouTube API Error: " + errText }), {
+              console.error("YouTube API Error:", errText);
+              return new Response(JSON.stringify({ error: "Failed to fetch comment threads" }), {
                 status: response.status,
                 headers: { "Content-Type": "application/json", ...corsHeaders },
               });
@@ -351,7 +353,7 @@ export default {
         );
       } catch (err: any) {
         console.error("Worker error handling /api/analyze-video:", err);
-        return new Response(JSON.stringify({ error: err.message || "Internal Server Error" }), {
+        return new Response(JSON.stringify({ error: "Internal error" }), {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });

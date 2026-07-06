@@ -48,18 +48,18 @@ The video received predominantly Negative feedback.
 ✅ Inorganic buzzer manipulation is low.
 
 ## 🌟 Top 5 Positive Comments
-- **@nisaaaulia7929** (15 likes): "Justru bagus wkwk, jadi gampang nyaring orang yang beneran nonton atau ga, dulu juga pas vid judulnya "saya lebih pintar daripada gus baha" beuh kolom komentar nya" (Confidence: 65%)
-- **@sirahanabi** (3 likes): "di indonesia kayaknya skrng2 ini ngegosipin pemerintahan lebih seru ketimbang artis wkwkwkw" (Confidence: 65%)
-- **@Ymiiiiir** (1 likes): "penghinaan tetaplah penghinaan, tinggal tunggu tgl mainnya bhaha" (Confidence: 65%)
-- **@Alpharezl** (1 likes): "Susah g mau, gw maunya yg cepet klo bs dibikin short max 60 detik. Itu tuh gw tuh udh paham betul the whole long story nya g perlu panjang2 sih" (Confidence: 65%)
-- **@abubakr535** (0 likes): "Wkwkwkwkwkwkwk aku aja langsung ngakak Dan bisa membayangkanapa yg terjadi wkwkwkwkw" (Confidence: 65%)
+- **@user_001** (15 likes): "Justru bagus wkwk, jadi gampang nyaring orang yang beneran nonton atau ga, dulu juga pas vid judulnya "saya lebih pintar daripada gus baha" beuh kolom komentar nya" (Confidence: 65%)
+- **@user_002** (3 likes): "di indonesia kayaknya skrng2 ini ngegosipin pemerintahan lebih seru ketimbang artis wkwkwkw" (Confidence: 65%)
+- **@user_003** (1 likes): "penghinaan tetaplah penghinaan, tinggal tunggu tgl mainnya bhaha" (Confidence: 65%)
+- **@user_004** (1 likes): "Susah g mau, gw maunya yg cepet klo bs dibikin short max 60 detik. Itu tuh gw tuh udh paham betul the whole long story nya g perlu panjang2 sih" (Confidence: 65%)
+- **@user_005** (0 likes): "Wkwkwkwkwkwkwk aku aja langsung ngakak Dan bisa membayangkanapa yg terjadi wkwkwkwkw" (Confidence: 65%)
 
 ## 🚨 Top 5 Negative Comments
-- **@LogikaSederhana123** (1 likes): "Masalahnya ini begitu nampak Pak Guru bahkan penindakan kepada kaum kaum LGBTpun serasa tidak ada,terlepas dari kebijakan prabowo banyak yang kurang baik sepatutnya ini juga ada dalam ranah pengawasan/kewaspadaan masyarakat,sekali lagi ini nampak." (Confidence: 65%)
-- **@sunnysunshine4000** (0 likes): "BUKAN SOAL TEDDY DAN PRABOWO ITU KECENDERUNGAN HOMO ...ITU PRIBADI BUKAN URUSAN GUE TTP : JANGAN BODOH MEMIMPIN ROYAL BUANG UANG RAPBN MILIK RAKYAT...NGERUGIIN CURANGI RAKYAT DAN YG KORUPSI DI BELA  OLEH PEMERINTAH..ITU YG LAKNAT DAN SEBAGAI RAKYAT SAYA GAK TERIMA TAHUUUUU!!" (Confidence: 65%)
-- **@guide-ww7nr** (0 likes): "​@Tvxo_o15fakta, tapi boomeer tidak suka 😂" (Confidence: 65%)
-- **@eritenk7838** (0 likes): "Konaha jaman skrng males ntn sama males baca" (Confidence: 65%)
-- **@RockAndaroll** (0 likes): "Yg jadi masalah kerja wowo jelek" (Confidence: 65%)
+- **@user_006** (1 likes): "Masalahnya ini begitu nampak Pak Guru bahkan penindakan kepada kaum kaum LGBTpun serasa tidak ada,terlepas dari kebijakan prabowo banyak yang kurang baik sepatutnya ini juga ada dalam ranah pengawasan/kewaspadaan masyarakat,sekali lagi ini nampak." (Confidence: 65%)
+- **@user_007** (0 likes): "BUKAN SOAL TEDDY DAN PRABOWO ITU KECENDERUNGAN HOMO ...ITU PRIBADI BUKAN URUSAN GUE TTP : JANGAN BODOH MEMIMPIN ROYAL BUANG UANG RAPBN MILIK RAKYAT...NGERUGIIN CURANGI RAKYAT DAN YG KORUPSI DI BELA  OLEH PEMERINTAH..ITU YG LAKNAT DAN SEBAGAI RAKYAT SAYA GAK TERIMA TAHUUUUU!!" (Confidence: 65%)
+- **@user_008** (0 likes): "​@Tvxo_o15fakta, tapi boomeer tidak suka 😂" (Confidence: 65%)
+- **@user_009** (0 likes): "Konaha jaman skrng males ntn sama males baca" (Confidence: 65%)
+- **@user_010** (0 likes): "Yg jadi masalah kerja wowo jelek" (Confidence: 65%)
 
 ## 🕸️ Top Buzzer Rings Forensics
 - **Ring ID:** UgxdbMCNJ_tmEIUBs2d4AaABAg.AXVcRd1Es-UAXaO1qp2WyP | **Size:** 2 identical comments | **Template:** "​@-kuntadi6837gembulinium 😂😂😂😂"

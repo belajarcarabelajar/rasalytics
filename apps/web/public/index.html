@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' http://127.0.0.1:8787 https://rasalytics-api.belajarcarabelajar.workers.dev https://*.rasalytics.pages.dev; frame-ancestors 'none';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
   <title>Rasalytics | Raw YouTube Intelligence</title>
@@ -186,8 +187,8 @@
     </main>
   </div>
   
-  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js" defer></script>
+  <script src="chart.umd.js" integrity="sha384-tgbB5AKnszdcfwcZtTfuhR3Ko1XZdlDfsLtkxiiAZiVkkXCkFmp+FQFh+V/UTo54" crossorigin="anonymous" defer></script>
+  <script src="wordcloud2.min.js" integrity="sha384-EuMVig/i0NsY8k6u37PJ4vzAbjRrxUknKzGF1JX32n8tasgHVvG817xx3+6WatZe" crossorigin="anonymous" defer></script>
   <script src="app.v8.js?v=11" defer></script>
 </body>
 </html>
