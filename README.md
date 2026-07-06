@@ -7,12 +7,12 @@ A powerful YouTube comments scraper and hybrid sentiment analyzer specifically t
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Demo / Screenshot**
-> ![Analysis Summary Demo](./demo_summary.jpg)
+> ![Analysis Summary Demo](./demo-summary.jpg)
 
 ## Description
 Analyzing YouTube comments manually can be overwhelming, especially for videos with thousands of interactions. This tool automates the extraction and analysis of YouTube comments, providing deep, actionable insights into audience sentiment. It combines a lexicon-based approach and a localized HuggingFace transformer model (Indonesian RoBERTa) to classify comment sentiments. Built-in spam and toxicity filters ensure the resulting data is clean and highly relevant.
 
-## 🌍 Philosophy, Mission, & Societal Impact
+## 🌍 Philosophy, Mission, and Societal Impact
 
 *“Technology without philosophy is just a tool; but technology driven by a profound mission is a catalyst for societal change.”*
 
@@ -20,10 +20,10 @@ While sentiment analysis is heavily utilized in the corporate world for brand mo
 
 In the modern digital era, where algorithms curate echo chambers and public opinion is easily manipulated, open-source analytical tools must step up to serve the broader society. Our mission focuses on the following pillars:
 
-1. **Defending Digital Democracy & Transparency**
+1. **Defending Digital Democracy and Transparency**
    Political discourse on platforms like YouTube is often obscured by algorithmic bias, making it difficult to gauge true public sentiment. This tool empowers citizens, independent journalists, and researchers to bypass "filter bubbles" and transparently audit how political campaigns, policies, or figures are actually being received by the public.
    
-2. **Combatting Astroturfing & Organized Manipulation (Buzzers)**
+2. **Combatting Astroturfing and Organized Manipulation (Buzzers)**
    Political propaganda frequently relies on engineered toxicity and inorganic spam (e.g., coordinated *buzzer* attacks or bot farms) to drown out genuine debate. By integrating rigorous spam and toxicity detection, this tool aims to separate organic citizen feedback from paid manipulation, providing a clearer picture of authentic public discourse.
 
 3. **Mitigating Societal Polarization**
@@ -34,13 +34,13 @@ Ultimately, this project is not just a technological achievement in machine lear
 ## Features
 - **Data Scraping**: Fetches top-level comments and replies using the official YouTube Data API v3.
 - **Hybrid Sentiment Analysis**: Uses HuggingFace Transformers (Indonesian RoBERTa) for Indonesian/English comment classification, lexicon-based fallback/overrides, and conjunction splitting for mixed sentiment detection.
-- **Spam & Toxicity Detection**: Built-in detection for spam URLs/keywords and toxic vocabulary.
+- **Spam and Toxicity Detection**: Built-in detection for spam URLs/keywords and toxic vocabulary.
 - **Rich Markdown Reports**: Generates a detailed report with actionable insights, summary metrics, and full data export to markdown.
 
 ## Tech Stack
 - **Runtime**: [Bun](https://bun.sh) & TypeScript
 - **Machine Learning**: `@xenova/transformers` (Indonesian RoBERTa model), custom slang/toxic dictionaries, and lexicon fallbacks
-- **Language Detection & Preprocessing**: `franc-min`, `emoji-emotion`
+- **Language Detection and Preprocessing**: `franc-min`, `emoji-emotion`
 
 ## Prerequisites
 - **Bun**: v1.0 or higher.
@@ -98,7 +98,7 @@ This script will:
 - Deploy the Worker API (`rasalytics-api`) to Cloudflare Workers.
 - Deploy the static frontend to Cloudflare Pages (`rasalytics-web`).
 
-### Security Notes & Limitations
+### Security Notes and Limitations
 - **Edge Limits Limitation:** The Cloudflare Worker API does NOT use `@xenova/transformers` due to edge limits and cold starts. It uses a lightweight, deterministic lexicon and rule-based approach.
 - Do NOT commit real secrets to the repository. Use `wrangler secret put <NAME>` for backend secrets.
 - `local_models/` and other offline artifacts are safely excluded from the website deployment.
@@ -192,7 +192,7 @@ A robust internal network fetch handler that automatically retries API requests 
 Processes a raw YouTube comment snippet, invokes the preprocessing and analyzer pipelines, and formats the result into a clean `CommentData` object.
 - **Returns**: `Promise<CommentData>`
 
-## Limitations & Compliance
+## Limitations and Compliance
 - **YouTube Terms of Service**: Users must comply with the [YouTube API Terms of Service](https://developers.google.com/youtube/terms/api-services-terms-of-service) when using this tool.
 - **Quota Limits**: The YouTube Data API v3 has strict quota limits (default 10,000 units per day). Fetching comments consumes quota (e.g., 1 unit per page of comments). Be mindful of your usage to avoid exhaustion.
 - **Privacy Risks**: Storing and redistributing scraped YouTube user comments presents privacy and copyright risks. Do not distribute or publish raw user data sets without verifying compliance obligations and redistribution rights under the YouTube ToS.
