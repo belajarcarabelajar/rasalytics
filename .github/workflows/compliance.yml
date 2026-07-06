@@ -6,16 +6,19 @@ on:
   pull_request:
     branches: [ master, main ]
 
+permissions:
+  contents: read
+
 jobs:
   secret-scanning:
     name: Secret Scanning
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d93d129bcbf406c551c7ec557598c129 # v4
         with:
           fetch-depth: 0
       - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@f2452388aa3f323719026211226e8f4710b7ea5d # v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -23,7 +26,7 @@ jobs:
     name: License Metadata Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@692973e3d93d129bcbf406c551c7ec557598c129 # v4
       - name: Check for LICENSE file
         run: |
           if [ ! -f "LICENSE" ]; then
