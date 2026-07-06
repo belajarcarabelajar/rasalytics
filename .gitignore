@@ -44,3 +44,7 @@ dirtree-report.md
 # artifacts
 .artifacts/
 
+# wrangler
+.wrangler/
+wrangler.log
+.wrangler.log

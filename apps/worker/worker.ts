@@ -1,4 +1,5 @@
-import { analyzeEdgeSafe, preprocess, getShingles, jaccard } from "@rasalytics/sentiment-core";
+import { preprocess, analyzeEdgeSafe } from "../../packages/sentiment-core/src/shared-sentiment.js";
+import { getShingles, jaccard } from "../../packages/sentiment-core/src/forensics.js";
 
 import { z } from "zod";
 
@@ -8,7 +9,7 @@ interface Env {
 
 const AnalyzeVideoSchema = z.object({
   videoId: z.string().min(1, "Missing videoId"),
-  maxPages: z.number().int().min(1).max(10).optional().default(1),
+  maxPages: z.number().int().min(1).max(10, { message: "maxPages must be 10 or fewer" }).optional().default(1),
 });
 
 // Cache global allowed origins
@@ -57,8 +58,26 @@ export default {
         const parsedBody = AnalyzeVideoSchema.safeParse(jsonBody);
 
         if (!parsedBody.success) {
+          // Trace the offending value
+          for (const issue of parsedBody.error.issues) {
+            const pathStr = issue.path.join(".");
+            let receivedValue: any = jsonBody;
+            for (const key of issue.path) {
+              receivedValue = receivedValue?.[key];
+            }
+            console.error(`Validation failed at field path "${pathStr}": received ${receivedValue}. Error: ${issue.message}`);
+          }
+
           const errorMessage = parsedBody.error.issues.map((e) => e.message).join(", ");
-          return new Response(JSON.stringify({ error: errorMessage }), {
+          const structuredError = {
+            error: errorMessage,
+            details: parsedBody.error.issues.map((issue) => ({
+              path: issue.path.join("."),
+              message: issue.message,
+            })),
+          };
+
+          return new Response(JSON.stringify(structuredError), {
             status: 400,
             headers: { "Content-Type": "application/json", ...corsHeaders },
           });

@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test, spyOn } from "bun:test";
 import worker from "./worker.js";
 
 test("POST /api/analyze-video with invalid body returns 400 error", async () => {
@@ -16,6 +16,161 @@ test("POST /api/analyze-video with invalid body returns 400 error", async () => 
   const response = await worker.fetch(request, env, ctx);
   expect(response.status).toBe(400);
 
-  const data = await response.json();
+  const data = (await response.json()) as any;
   expect(data.error).toContain("Missing videoId");
+});
+
+test("POST /api/analyze-video with maxPages exactly the boundary (10) passes validation", async () => {
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
+    (async (url: any) => {
+      const urlStr = String(url);
+      if (urlStr.includes("youtube/v3/videos")) {
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                snippet: { title: "Mock Video", channelTitle: "Mock Channel" },
+                statistics: { viewCount: "100", likeCount: "50", commentCount: "5" },
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      if (urlStr.includes("youtube/v3/commentThreads")) {
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                snippet: {
+                  topLevelComment: {
+                    id: "comment_id_1",
+                    snippet: {
+                      authorDisplayName: "Mock User",
+                      textOriginal: "This is a mock comment.",
+                      likeCount: 10,
+                      publishedAt: "2026-07-06T00:00:00Z",
+                    },
+                  },
+                  totalReplyCount: 0,
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    }) as any
+  );
+
+  const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ videoId: "test_video_id", maxPages: 10 }),
+  });
+
+  const env = { YOUTUBE_API_KEY: "dummy" };
+  const ctx = {};
+
+  try {
+    const response = await worker.fetch(request, env, ctx);
+    expect(response.status).toBe(200);
+    const data = (await response.json()) as any;
+    expect(data.videoDetails.title).toBe("Mock Video");
+    expect(data.total).toBe(1);
+  } finally {
+    fetchSpy.mockRestore();
+  }
+});
+
+test("POST /api/analyze-video with maxPages one below the boundary (9) passes validation", async () => {
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
+    (async (url: any) => {
+      const urlStr = String(url);
+      if (urlStr.includes("youtube/v3/videos")) {
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                snippet: { title: "Mock Video 2", channelTitle: "Mock Channel 2" },
+                statistics: { viewCount: "100", likeCount: "50", commentCount: "5" },
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      if (urlStr.includes("youtube/v3/commentThreads")) {
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                snippet: {
+                  topLevelComment: {
+                    id: "comment_id_2",
+                    snippet: {
+                      authorDisplayName: "Mock User 2",
+                      textOriginal: "This is another mock comment.",
+                      likeCount: 5,
+                      publishedAt: "2026-07-06T00:00:00Z",
+                    },
+                  },
+                  totalReplyCount: 0,
+                },
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    }) as any
+  );
+
+  const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ videoId: "test_video_id", maxPages: 9 }),
+  });
+
+  const env = { YOUTUBE_API_KEY: "dummy" };
+  const ctx = {};
+
+  try {
+    const response = await worker.fetch(request, env, ctx);
+    expect(response.status).toBe(200);
+    const data = (await response.json()) as any;
+    expect(data.videoDetails.title).toBe("Mock Video 2");
+    expect(data.total).toBe(1);
+  } finally {
+    fetchSpy.mockRestore();
+  }
+});
+
+test("POST /api/analyze-video with maxPages one above the boundary (11) fails validation with structured error", async () => {
+  const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ videoId: "test_video_id", maxPages: 11 }),
+  });
+
+  const env = { YOUTUBE_API_KEY: "dummy" };
+  const ctx = {};
+
+  const response = await worker.fetch(request, env, ctx);
+  expect(response.status).toBe(400);
+
+  const data = (await response.json()) as any;
+  expect(data.error).toContain("maxPages must be 10 or fewer");
+  expect(data.details).toBeArray();
+  expect(data.details).toHaveLength(1);
+  expect(data.details[0].path).toBe("maxPages");
+  expect(data.details[0].message).toBe("maxPages must be 10 or fewer");
 });
