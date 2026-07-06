@@ -3,14 +3,14 @@ A powerful YouTube comments scraper and hybrid sentiment analyzer specifically t
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Bun Version](https://img.shields.io/badge/Bun-v1.3.14-black?logo=bun)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?logo=typescript)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **Demo / Screenshot**
 > ![Analysis Summary Demo](./demo_summary.jpg)
 
 ## Description
-Analyzing YouTube comments manually can be overwhelming, especially for videos with thousands of interactions. This tool automates the extraction and analysis of YouTube comments, providing deep, actionable insights into audience sentiment. It combines a lexicon-based approach, localized HuggingFace transformer models (SST-2 for English, BERT for Indonesian), and local Ollama Qwen2.5 for accuracy verification. Built-in spam and toxicity filters ensure the resulting data is clean and highly relevant.
+Analyzing YouTube comments manually can be overwhelming, especially for videos with thousands of interactions. This tool automates the extraction and analysis of YouTube comments, providing deep, actionable insights into audience sentiment. It combines a lexicon-based approach and a localized HuggingFace transformer model (Indonesian RoBERTa) to classify comment sentiments. Built-in spam and toxicity filters ensure the resulting data is clean and highly relevant.
 
 ## 🌍 Philosophy, Mission, & Societal Impact
 
@@ -33,18 +33,17 @@ Ultimately, this project is not just a technological achievement in machine lear
 
 ## Features
 - **Data Scraping**: Fetches top-level comments and replies using the official YouTube Data API v3.
-- **Hybrid Sentiment Analysis**: Uses HuggingFace Transformers (SST-2 for English, BERT-multilingual for Indonesian), Lexicon-based fallbacks, and Ollama Qwen2.5 for accuracy verification.
+- **Hybrid Sentiment Analysis**: Uses HuggingFace Transformers (Indonesian RoBERTa) for Indonesian/English comment classification, lexicon-based fallback/overrides, and conjunction splitting for mixed sentiment detection.
 - **Spam & Toxicity Detection**: Built-in detection for spam URLs/keywords and toxic vocabulary.
 - **Rich Markdown Reports**: Generates a detailed report with actionable insights, summary metrics, and full data export to markdown.
 
 ## Tech Stack
 - **Runtime**: [Bun](https://bun.sh) & TypeScript
-- **Machine Learning**: `@xenova/transformers`, `sentiment` (Lexicon), Local Ollama (qwen2.5:1.5b)
+- **Machine Learning**: `@xenova/transformers` (Indonesian RoBERTa model), custom slang/toxic dictionaries, and lexicon fallbacks
 - **Language Detection & Preprocessing**: `franc-min`, `emoji-emotion`
 
 ## Prerequisites
 - **Bun**: v1.0 or higher.
-- **Ollama**: Running locally with the `qwen2.5:1.5b` model (`ollama run qwen2.5:1.5b`).
 - **YouTube Data API Key**: A valid API key from Google Cloud Console.
 
 ## Installation
@@ -75,7 +74,7 @@ This will automatically configure `.cursorrules`, `.clinerules`, and the necessa
 
 ## Cloudflare Website Deployment
 The project includes a deployable website version using **Cloudflare Pages** (frontend) and **Cloudflare Workers** (backend API). 
-**Note:** The Cloudflare API uses an *edge-safe* shared sentiment module that relies exclusively on deterministic lexicon-based and statistical checks (no heavy generative AI or Ollama dependencies) to ensure fast cold starts and security.
+**Note:** The Cloudflare API uses an *edge-safe* shared sentiment module that relies exclusively on deterministic lexicon-based and statistical checks (no heavy generative AI or local model dependencies) to ensure fast cold starts and security.
 
 ### Environment Setup
 Update your `.env` (or set via `wrangler` and Cloudflare Dashboard):
@@ -91,7 +90,7 @@ Update your `.env` (or set via `wrangler` and Cloudflare Dashboard):
 2. Run the deployment script:
    ```bash
    bun run deploy:website
-   # or manually: bash scripts/deploy-website.sh
+   # or manually: bash apps/web/deploy-website.sh
    ```
    
 This script will:
@@ -100,7 +99,7 @@ This script will:
 - Deploy the static frontend to Cloudflare Pages (`rasalytics-web`).
 
 ### Security Notes & Limitations
-- **ML-Only Limitation:** The Cloudflare Worker API does NOT use `@xenova/transformers` or `Ollama` generative AI due to edge limits and cold starts. It uses a lightweight, deterministic lexicon and rule-based approach.
+- **Edge Limits Limitation:** The Cloudflare Worker API does NOT use `@xenova/transformers` due to edge limits and cold starts. It uses a lightweight, deterministic lexicon and rule-based approach.
 - Do NOT commit real secrets to the repository. Use `wrangler secret put <NAME>` for backend secrets.
 - `local_models/` and other offline artifacts are safely excluded from the website deployment.
 
@@ -108,64 +107,81 @@ This script will:
 Run the script by providing a YouTube Video ID. You can also specify the maximum number of comment pages to fetch (default is 5).
 
 ```bash
-bun run src/index.ts --videoId=5bKxkW_z408 --maxPages=2
+bun run apps/cli/src/cli.ts --videoId=5bKxkW_z408 --maxPages=2
 ```
 
 ### Example Output (Terminal)
 ```text
 Starting comment collection for Video ID: 5bKxkW_z408...
+Processed page 1 ...
 
 === SENTIMENT RECAP ===
-Macro F1 requirement: Check test suite (rtk bun test)
-Total Comments: 125
-Positive: 80
-Negative: 15
-Neutral: 20
-Mixed: 0
-Spam: 8
-Toxic: 2
+Total Comments: 250
+Positive: 44
+Negative: 174
+Neutral: 24
+Mixed: 3
+Spam: 2
+Toxic: 3
+Buzzer: 4
 =======================
-Full markdown report saved to: /mnt/c/Users/Tedi Rahmat/Downloads/comments_5bKxkW_z408.md
+Cleaned up temporary database: ./temp_5bKxkW_z408.sqlite
 ```
+*Note: Output markdown report, CSV, and clean CSV are written to the current working directory as `./comments_${videoId}.md`, `./comments_${videoId}.csv`, and `./comments_${videoId}_clean.csv` respectively.*
 
 ## Project Structure
+This project is structured as a Bun monorepo:
 ```text
 rasalytics/
-├── src/
-│   ├── index.ts                 # Main scraper and analyzer CLI script
-│   ├── index.test.ts            # Test suite for sentiment and scraping logic
-│   ├── eval.test.ts             # Evaluation tests for sentiment accuracy
-│   ├── lexicons.ts              # Indonesian slang, toxic, and positive/negative lexicons
-│   ├── worker.ts                # Cloudflare Worker backend API
-│   └── shared-sentiment.ts      # Edge-safe sentiment logic for the backend
-├── scripts/
-│   ├── deploy-website.sh        # Deployment script for Cloudflare Worker and Pages
-│   └── setup-skills.ts          # Setup script for AI agents skills
-├── public/                      # Static frontend assets for Cloudflare Pages
-├── docs/                        # API, architecture, and Claude documentation
-├── audit-reports/               # Production-readiness audit reports and findings
-├── package.json                 # Dependencies and scripts
-├── tsconfig.json                # TypeScript configuration
+├── apps/
+│   ├── cli/
+│   │   └── src/
+│   │       └── cli.ts           # Scraper and analyzer CLI entry point
+│   ├── web/
+│   │   ├── deploy-website.sh    # Script to deploy backend and frontend
+│   │   ├── seo-lint.js          # SEO analysis tool for frontend
+│   │   └── public/              # Static frontend website assets
+│   └── worker/
+│       ├── worker.ts            # Cloudflare Worker backend API
+│       └── worker.test.ts       # Test suite for Cloudflare Worker
+├── packages/
+│   └── sentiment-core/
+│       ├── src/
+│       │   ├── index.ts         # Main sentiment analysis, database & report export
+│       │   ├── index.test.ts    # Test suite for scraper and core sentiment logic
+│       │   ├── eval.test.ts     # Evaluation tests for accuracy benchmarks
+│       │   ├── lexicons.ts      # Slang, toxic, and positive/negative dictionaries
+│       │   └── shared-sentiment.ts # Edge-safe sentiment logic for Cloudflare Worker
+│       └── package.json
+├── tools/
+│   └── scripts/
+│       ├── analyze_offline.ts   # Offline comment analysis tool
+│       ├── evaluate_baseline.ts # Sentiment baseline evaluator
+│       ├── fix_benchmark.ts     # Benchmark data fixer
+│       └── setup-skills.ts      # Setup script for AI agents skills
+├── docs/
+│   ├── audits/
+│   │   └── audit-reports/       # Production-readiness audit reports
+│   └── ...                      # Project specifications and guidelines
+├── package.json                 # Monorepo workspaces config and root tasks
 ├── bun.lock                     # Bun lockfile
-├── .env                         # Environment variables (API Key)
-├── local_models/                # Cached transformer models
-├── analyze_offline.ts           # Offline comment analysis tool
-├── evaluate_baseline.ts         # Sentiment baseline evaluator
-└── fix_benchmark.ts             # Benchmark data fixer
+├── bunfig.toml                  # Bun configuration
+├── tsconfig.json                # TypeScript compiler config
+└── .env                         # Local environment file (API Key)
 ```
 
 ## Contributing
 Contributions are welcome! Please open an issue or submit a Pull Request if you'd like to improve the sentiment accuracy, add support for more languages, or optimize the scraping process.
 
 ## API Reference / Internal Methods
-While primarily a CLI tool, the core logic is structured to be modular. Key components inside `src/index.ts` such as sentiment analysis pipelines and markdown report generators can potentially be exported. 
+The core analytical and utility logic is exported by the `@rasalytics/sentiment-core` package.
 
 ### `preprocess(text: string)`
 Cleans and normalizes the input text by stripping URLs, converting emojis to text labels, and handling repeating characters.
 - **Returns**: `{ normalized: string, urls: string[] }`
 
 ### `analyzeComment(text: string)`
-Performs hybrid sentiment analysis (Transformers, Lexicon, and Ollama verification) as well as spam and toxicity checks.
+Performs hybrid sentiment analysis (Transformers and Lexicon fallbacks) as well as spam and toxicity checks.
 - **Returns**: `Promise<{ score: number, confidence: number, label: string, isSpam: boolean, isToxic: boolean, reasoning: string }>`
 
 ### `fetchWithRetry(url: string, retries?: number, backoff?: number)`
@@ -183,7 +199,6 @@ Processes a raw YouTube comment snippet, invokes the preprocessing and analyzer 
 
 ## Acknowledgements
 - [Bun](https://bun.sh) for the incredibly fast TS runtime.
-- [Ollama](https://ollama.com/) & [Qwen2.5](https://qwenlm.github.io/) for advanced NLP sentiment verification.
 - [HuggingFace Transformers](https://huggingface.co/docs/transformers/index) via `@xenova/transformers` for local ML inference.
 - YouTube Data API v3 for the data infrastructure.
 
