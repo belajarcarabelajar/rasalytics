@@ -31,6 +31,13 @@ test("escapeCsv - formula injection", () => {
   expect(escapeCsv("@SUM(A1:A2)")).toBe('"\'@SUM(A1:A2)"');
 });
 
+test("escapeCsv - formula injection bypass with leading whitespaces", () => {
+  expect(escapeCsv(" =1+1")).toBe('"\' =1+1"');
+  expect(escapeCsv("  +A1")).toBe('"\'  +A1"');
+  expect(escapeCsv("\t-B2")).toBe('"\'\t-B2"');
+  expect(escapeCsv("\n@SUM(A1:A2)")).toBe('"\'\n@SUM(A1:A2)"');
+});
+
 test("escapeCsv - quotes and newlines", () => {
   expect(escapeCsv('he said "hello"')).toBe('"he said ""hello"""');
   expect(escapeCsv("line1\nline2")).toBe('"line1\nline2"');
