@@ -29,6 +29,10 @@ test("escapeCsv - formula injection", () => {
   expect(escapeCsv("+A1")).toBe('"\'+A1"');
   expect(escapeCsv("-B2")).toBe('"\'-B2"');
   expect(escapeCsv("@SUM(A1:A2)")).toBe('"\'@SUM(A1:A2)"');
+  expect(escapeCsv(" =1+1")).toBe('"\' =1+1"');
+  expect(escapeCsv("\t+A1")).toBe('"\'\t+A1"');
+  expect(escapeCsv(" \n-B2")).toBe('"\' \n-B2"');
+  expect(escapeCsv("  @SUM(A1:A2)")).toBe('"\'  @SUM(A1:A2)"');
 });
 
 test("escapeCsv - quotes and newlines", () => {

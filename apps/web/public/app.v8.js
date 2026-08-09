@@ -7,7 +7,7 @@ window.RasalyticsExportHelpers = {
   escapeCsv: function(value) {
     if (value === null || value === undefined) return '';
     let str = String(value);
-    if (/^[=+\-@]/.test(str)) {
+    if (/^\s*[=+\-@]/.test(str)) {
       str = "'" + str; // Prevent formula injection
     }
     // Always enclose in quotes for robust parsing, and escape inner quotes
