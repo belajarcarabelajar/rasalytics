@@ -12,6 +12,54 @@ const AnalyzeVideoSchema = z.object({
   maxPages: z.number().int().min(1).max(10, { message: "maxPages must be 10 or fewer" }).optional().default(1),
 });
 
+const YouTubeVideoSchema = z.object({
+  items: z.array(
+    z.object({
+      snippet: z.object({
+        title: z.string(),
+        channelTitle: z.string(),
+      }).passthrough(),
+      statistics: z.object({
+        viewCount: z.string().optional(),
+        likeCount: z.string().optional(),
+        commentCount: z.string().optional(),
+      }).passthrough(),
+    }).passthrough()
+  ).optional(),
+}).passthrough();
+
+const YouTubeCommentSchema = z.object({
+  id: z.string(),
+  snippet: z.object({
+    authorDisplayName: z.string(),
+    textOriginal: z.string().optional(),
+    textDisplay: z.string().optional(),
+    likeCount: z.number().optional(),
+    publishedAt: z.string().optional(),
+  }).passthrough(),
+}).passthrough();
+
+const YouTubeCommentThreadSchema = z.object({
+  nextPageToken: z.string().optional(),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      snippet: z.object({
+        totalReplyCount: z.number().optional().default(0),
+        topLevelComment: YouTubeCommentSchema,
+      }).passthrough(),
+      replies: z.object({
+        comments: z.array(YouTubeCommentSchema).optional(),
+      }).passthrough().optional(),
+    }).passthrough()
+  ).optional(),
+}).passthrough();
+
+const YouTubeCommentsResponseSchema = z.object({
+  nextPageToken: z.string().optional(),
+  items: z.array(YouTubeCommentSchema).optional(),
+}).passthrough();
+
 // Cache global allowed origins
 const ALLOWED_PAGES_SUFFIX = ".rasalytics.pages.dev";
 const ALLOWED_ORIGINS = new Set([
@@ -116,24 +164,38 @@ export default {
           const vRes = await fetch(vUrl.toString());
           subrequestCount++;
           if (vRes.ok) {
-            const vData = (await vRes.json()) as any;
-            if (vData.items && vData.items.length > 0) {
-              const vInfo = vData.items[0];
-              videoDetails = {
-                title: vInfo.snippet.title,
-                channel: vInfo.snippet.channelTitle,
-                views: parseInt(vInfo.statistics.viewCount || "0"),
-                likes: parseInt(vInfo.statistics.likeCount || "0"),
-                commentCount: parseInt(vInfo.statistics.commentCount || "0"),
-              };
+            const rawData = (await vRes.json()) as unknown;
+            const parsedData = YouTubeVideoSchema.safeParse(rawData);
+            if (parsedData.success) {
+              const vData = parsedData.data;
+              if (vData.items && vData.items.length > 0) {
+                const vInfo = vData.items[0];
+                videoDetails = {
+                  title: vInfo.snippet.title,
+                  channel: vInfo.snippet.channelTitle,
+                  views: parseInt(vInfo.statistics.viewCount || "0"),
+                  likes: parseInt(vInfo.statistics.likeCount || "0"),
+                  commentCount: parseInt(vInfo.statistics.commentCount || "0"),
+                };
+              }
+            } else {
+              console.error("Failed to parse video details:", parsedData.error.message);
             }
           }
         } catch (e: any) {
           console.error("Error fetching video details:", e.message || e);
         }
 
+        interface CommentData {
+          id: string;
+          author: string;
+          text: string;
+          likes: number;
+          publishedAt?: string;
+        }
+
         // 2. Fetch Comments (Pagination & Replies)
-        let allComments: any[] = [];
+        let allComments: CommentData[] = [];
         let pageToken = "";
         let pageCount = 0;
 
@@ -163,7 +225,14 @@ export default {
             break; // Stop paginating on error
           }
 
-          const data = (await response.json()) as any;
+          const rawData = (await response.json()) as unknown;
+          const parsedData = YouTubeCommentThreadSchema.safeParse(rawData);
+          if (!parsedData.success) {
+            console.error("Failed to parse comment threads:", parsedData.error.message);
+            break;
+          }
+
+          const data = parsedData.data;
           const items = data.items || [];
           if (items.length === 0) break;
 
@@ -210,22 +279,30 @@ export default {
                   const rRes = await fetch(rUrl.toString());
                   subrequestCount++;
                   if (rRes.ok) {
-                    const rData = (await rRes.json()) as any;
-                    for (const reply of rData.items || []) {
-                      // avoid duplicates by checking if we already have it
-                      const exists = item.replies?.comments?.some((c: any) => c.id === reply.id);
-                      if (!exists) {
-                        allComments.push({
-                          id: reply.id,
-                          author: reply.snippet.authorDisplayName,
-                          text: reply.snippet.textOriginal || reply.snippet.textDisplay || "",
-                          likes: reply.snippet.likeCount || 0,
-                          publishedAt: reply.snippet.publishedAt,
-                        });
+                    const rawRData = (await rRes.json()) as unknown;
+                    const parsedRData = YouTubeCommentsResponseSchema.safeParse(rawRData);
+
+                    if (parsedRData.success) {
+                      const rData = parsedRData.data;
+                      for (const reply of rData.items || []) {
+                        // avoid duplicates by checking if we already have it
+                        const exists = item.replies?.comments?.some((c) => c.id === reply.id);
+                        if (!exists) {
+                          allComments.push({
+                            id: reply.id,
+                            author: reply.snippet.authorDisplayName,
+                            text: reply.snippet.textOriginal || reply.snippet.textDisplay || "",
+                            likes: reply.snippet.likeCount || 0,
+                            publishedAt: reply.snippet.publishedAt,
+                          });
+                        }
                       }
+                      rPageToken = rData.nextPageToken || "";
+                      if (!rPageToken) break;
+                    } else {
+                      console.error("Failed to parse replies:", parsedRData.error.message);
+                      break;
                     }
-                    rPageToken = rData.nextPageToken;
-                    if (!rPageToken) break;
                   } else {
                     break;
                   }
