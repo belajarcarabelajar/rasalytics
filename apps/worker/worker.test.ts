@@ -174,3 +174,79 @@ test("POST /api/analyze-video with maxPages one above the boundary (11) fails va
   expect(data.details[0].path).toBe("maxPages");
   expect(data.details[0].message).toBe("maxPages must be 10 or fewer");
 });
+
+test("POST /api/analyze-video handles fetch replies exception gracefully", async () => {
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
+    (async (url: any) => {
+      const urlStr = String(url);
+      if (urlStr.includes("youtube/v3/videos")) {
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                snippet: { title: "Mock Video", channelTitle: "Mock Channel" },
+                statistics: { viewCount: "100", likeCount: "50", commentCount: "5" },
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      if (urlStr.includes("youtube/v3/commentThreads")) {
+        return new Response(
+          JSON.stringify({
+            items: [
+              {
+                id: "parent_comment_1",
+                snippet: {
+                  topLevelComment: {
+                    id: "comment_id_1",
+                    snippet: {
+                      authorDisplayName: "Mock User",
+                      textOriginal: "This is a mock comment.",
+                      likeCount: 10,
+                      publishedAt: "2026-07-06T00:00:00Z",
+                    },
+                  },
+                  totalReplyCount: 1, // Triggers fetch to /youtube/v3/comments
+                },
+                replies: {
+                  comments: [] // No inline replies, forcing the fetch
+                }
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      if (urlStr.includes("youtube/v3/comments")) {
+        throw new Error("Simulated network error fetching replies");
+      }
+      return new Response(JSON.stringify({}), { status: 200 });
+    }) as any
+  );
+
+  const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ videoId: "test_video_id", maxPages: 1 }),
+  });
+
+  const env = { YOUTUBE_API_KEY: "dummy" };
+  const ctx = {};
+
+  try {
+    const response = await worker.fetch(request, env, ctx);
+    expect(response.status).toBe(200);
+    const data = (await response.json()) as any;
+    expect(data.videoDetails.title).toBe("Mock Video");
+    // Ensure the main comment is still processed despite the error fetching replies
+    expect(data.total).toBe(1);
+    expect(data.allComments).toHaveLength(1);
+    expect(data.allComments[0].id).toBe("comment_id_1");
+  } finally {
+    fetchSpy.mockRestore();
+  }
+});
