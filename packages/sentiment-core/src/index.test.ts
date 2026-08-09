@@ -87,10 +87,10 @@ test("Fetch retry loop recovers after intermittent 500 error", async () => {
   fetchSpy.mockRestore();
 });
 
-test("escapeMarkdown sanitizes pipe characters and newlines", () => {
-  const badInput = "Hello | World\nNew Line";
+test("escapeMarkdown sanitizes pipe characters, markdown chars and newlines", () => {
+  const badInput = "Hello | `World` *New* _Line_ [Link]\nNew Line";
   const safe = escapeMarkdown(badInput);
-  expect(safe).toBe("Hello \\| World New Line");
+  expect(safe).toBe("Hello \\| \\`World\\` \\*New\\* \\_Line\\_ \\[Link\\] New Line");
 });
 
 import { fetchCommentThreads, fetchReplies, generateMarkdownReport } from "./index";
