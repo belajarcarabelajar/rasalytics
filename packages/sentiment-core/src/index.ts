@@ -83,17 +83,15 @@ function splitByConjunction(text: string): string[] {
   return parts.filter((p) => p.trim().length > 3);
 }
 
-interface NormalizedText {
-  normalized: string;
-  urls: string[];
-  words: string[];
-  mapped: string[];
-}
-
-// Normalize text for the transformer. Intentionally omits negation joining
-// (shared-sentiment.preprocess joins "tidak X" → "tidak_X") and includes two
-// extra adversarial mappings ("ga/gak ada yang bagus") not present there.
-function normalizeForTransformer(text: string): NormalizedText {
+export async function analyzeComment(text: string): Promise<{
+  score: number;
+  confidence: number;
+  label: string;
+  isSpam: boolean;
+  isToxic: boolean;
+  reasoning: string;
+}> {
+  // Preprocess text without negation joining for the transformer
   let norm = text.toLowerCase();
   const urls =
     norm.match(/https?:\/\/[^\s]+/g) || norm.match(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g) || [];
@@ -121,100 +119,20 @@ function normalizeForTransformer(text: string): NormalizedText {
 
   const words = norm.split(" ");
   const mapped = words.map((w) => slangDict[w] || w);
-  return { normalized: mapped.join(" "), urls, words, mapped };
-}
+  const normalizedForTransformer = mapped.join(" ");
 
-function detectSpam(normalized: string, rawLower: string, urls: string[]): boolean {
-  if (urls.length > 0) return true;
+  let isSpam = urls.length > 0;
   for (const kw of spamKeywords) {
-    if (normalized.includes(kw) || rawLower.includes(kw)) return true;
+    if (normalizedForTransformer.includes(kw) || text.toLowerCase().includes(kw)) isSpam = true;
   }
-  if (normalized.includes("link")) return true;
-  return false;
-}
+  if (normalizedForTransformer.includes("link")) isSpam = true;
 
-function detectToxic(words: string[]): boolean {
+  let isToxic = false;
   for (const w of words) {
-    if (toxicLexicon.has(w)) return true;
+    if (toxicLexicon.has(w)) isToxic = true;
   }
-  return false;
-}
 
-// Unigram + bigram lexicon scoring. Used for both whole-sentence and per-part
-// (conjunction-split) inference.
-function scoreLexicon(tokens: string[]): number {
-  let score = 0;
-  for (const t of tokens) {
-    if (idLexicon[t]) score += idLexicon[t];
-  }
-  for (let i = 0; i < tokens.length - 1; i++) {
-    const bigram = `${tokens[i]}_${tokens[i + 1]}`;
-    if (idLexicon[bigram]) score += idLexicon[bigram];
-  }
-  return score;
-}
-
-type SentimentLabel = "POSITIVE" | "NEGATIVE" | "NEUTRAL";
-
-// Classify one conjunction-split part: start with the transformer's label,
-// then adjust based on the part's local lexicon score.
-function classifyPart(partLabelRaw: string | undefined, part: string | undefined): SentimentLabel {
-  let partLabel = String(partLabelRaw).toUpperCase() as SentimentLabel;
-  const pLexScore = scoreLexicon((part ?? "").split(" "));
-
-  if (partLabel === "NEUTRAL") {
-    if (pLexScore >= 2) partLabel = "POSITIVE";
-    else if (pLexScore <= -2) partLabel = "NEGATIVE";
-  } else if (partLabel === "NEGATIVE" && pLexScore >= 3) {
-    partLabel = "POSITIVE";
-  } else if (partLabel === "POSITIVE" && pLexScore <= -3) {
-    partLabel = "NEGATIVE";
-  }
-  return partLabel;
-}
-
-interface LexiconOverride {
-  label: SentimentLabel;
-  score: number;
-  confidence: number;
-  suffix: string;
-}
-
-// Apply lexicon override heuristics to the transformer's whole-sentence label.
-function applyLexiconOverrides(label: SentimentLabel, lexScore: number): LexiconOverride {
-  if (label === "NEUTRAL") {
-    if (lexScore >= 2) {
-      return { label: "POSITIVE", score: 1, confidence: 75, suffix: " (Lexicon override: Positive)" };
-    }
-    if (lexScore <= -2) {
-      return { label: "NEGATIVE", score: -1, confidence: 75, suffix: " (Lexicon override: Negative)" };
-    }
-    return { label, score: 0, confidence: 0, suffix: "" };
-  }
-  if (label === "NEGATIVE" && lexScore >= 3) {
-    return { label: "POSITIVE", score: 1, confidence: 75, suffix: " (Lexicon override: Strong Positive)" };
-  }
-  if (label === "POSITIVE" && lexScore <= -3) {
-    return { label: "NEGATIVE", score: -1, confidence: 75, suffix: " (Lexicon override: Strong Negative)" };
-  }
-  return { label, score: 0, confidence: 0, suffix: "" };
-}
-
-export async function analyzeComment(text: string): Promise<{
-  score: number;
-  confidence: number;
-  label: string;
-  isSpam: boolean;
-  isToxic: boolean;
-  reasoning: string;
-}> {
-  const { normalized: normalizedForTransformer, urls, words, mapped } =
-    normalizeForTransformer(text);
-
-  const isSpam = detectSpam(normalizedForTransformer, text.toLowerCase(), urls);
-  const isToxic = detectToxic(words);
-
-  let label: string = "NEUTRAL";
+  let label = "NEUTRAL";
   let confidence = 100;
   let reasoning = "";
   let score = 0;
@@ -232,9 +150,19 @@ export async function analyzeComment(text: string): Promise<{
     reasoning = "Empty or emoji only";
     score = 0;
   } else {
-    const lexiconScore = scoreLexicon(mapped);
+    // Lexicon Scoring for override heuristics
+    let lexiconScore = 0;
+    for (const w of mapped) {
+      if (idLexicon[w]) lexiconScore += idLexicon[w];
+    }
+    for (let i = 0; i < mapped.length - 1; i++) {
+      const bigram = `${mapped[i]}_${mapped[i + 1]}`;
+      if (idLexicon[bigram]) lexiconScore += idLexicon[bigram];
+    }
 
+    // Transformer Inference
     const cls = await getClassifier();
+
     if (cls === "failed") {
       return analyzeEdgeSafe(text);
     }
@@ -242,11 +170,33 @@ export async function analyzeComment(text: string): Promise<{
     // MIXED Detection via conjunction splitting
     const parts = splitByConjunction(normalizedForTransformer);
     if (parts.length > 1) {
-      const partResults = await Promise.all(parts.map((p) => cls(p)));
       let hasPos = false;
       let hasNeg = false;
+
+      const partResults = await Promise.all(parts.map((p) => cls(p)));
+
       for (let j = 0; j < parts.length; j++) {
-        const partLabel = classifyPart(partResults[j][0].label, parts[j]);
+        const p = parts[j];
+        const res = partResults[j];
+        let partLabel = res[0].label.toUpperCase();
+
+        let pLexScore = 0;
+        const pWords = p.split(" ");
+        for (const w of pWords) if (idLexicon[w]) pLexScore += idLexicon[w];
+        for (let i = 0; i < pWords.length - 1; i++) {
+          const bg = `${pWords[i]}_${pWords[i + 1]}`;
+          if (idLexicon[bg]) pLexScore += idLexicon[bg];
+        }
+
+        if (partLabel === "NEUTRAL") {
+          if (pLexScore >= 2) partLabel = "POSITIVE";
+          else if (pLexScore <= -2) partLabel = "NEGATIVE";
+        } else if (partLabel === "NEGATIVE" && pLexScore >= 3) {
+          partLabel = "POSITIVE";
+        } else if (partLabel === "POSITIVE" && pLexScore <= -3) {
+          partLabel = "NEGATIVE";
+        }
+
         if (partLabel === "POSITIVE") hasPos = true;
         if (partLabel === "NEGATIVE") hasNeg = true;
       }
@@ -269,12 +219,29 @@ export async function analyzeComment(text: string): Promise<{
     reasoning = `Model: Indonesian RoBERTa Transformer (${confidence}%)`;
     score = label === "POSITIVE" ? 1 : label === "NEGATIVE" ? -1 : 0;
 
-    const override = applyLexiconOverrides(label as SentimentLabel, lexiconScore);
-    if (override.suffix) {
-      label = override.label;
-      score = override.score;
-      confidence = override.confidence;
-      reasoning += override.suffix;
+    // Lexicon Override Heuristics
+    if (label === "NEUTRAL") {
+      if (lexiconScore >= 2) {
+        label = "POSITIVE";
+        score = 1;
+        confidence = 75;
+        reasoning += " (Lexicon override: Positive)";
+      } else if (lexiconScore <= -2) {
+        label = "NEGATIVE";
+        score = -1;
+        confidence = 75;
+        reasoning += " (Lexicon override: Negative)";
+      }
+    } else if (label === "NEGATIVE" && lexiconScore >= 3) {
+      label = "POSITIVE";
+      score = 1;
+      confidence = 75;
+      reasoning += " (Lexicon override: Strong Positive)";
+    } else if (label === "POSITIVE" && lexiconScore <= -3) {
+      label = "NEGATIVE";
+      score = -1;
+      confidence = 75;
+      reasoning += " (Lexicon override: Strong Negative)";
     }
   }
 

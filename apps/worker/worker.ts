@@ -9,89 +9,56 @@ interface Env {
 
 const AnalyzeVideoSchema = z.object({
   videoId: z.string().min(1, "Missing videoId"),
-  maxPages: z
-    .number()
-    .int()
-    .min(1)
-    .max(10, { message: "maxPages must be 10 or fewer" })
-    .optional()
-    .default(1),
+  maxPages: z.number().int().min(1).max(10, { message: "maxPages must be 10 or fewer" }).optional().default(1),
 });
 
-const YouTubeVideoSchema = z
-  .object({
-    items: z
-      .array(
-        z
-          .object({
-            snippet: z
-              .object({
-                title: z.string(),
-                channelTitle: z.string(),
-              })
-              .passthrough(),
-            statistics: z
-              .object({
-                viewCount: z.string().optional(),
-                likeCount: z.string().optional(),
-                commentCount: z.string().optional(),
-              })
-              .passthrough(),
-          })
-          .passthrough(),
-      )
-      .optional(),
-  })
-  .passthrough();
+const YouTubeVideoSchema = z.object({
+  items: z.array(
+    z.object({
+      snippet: z.object({
+        title: z.string(),
+        channelTitle: z.string(),
+      }).passthrough(),
+      statistics: z.object({
+        viewCount: z.string().optional(),
+        likeCount: z.string().optional(),
+        commentCount: z.string().optional(),
+      }).passthrough(),
+    }).passthrough()
+  ).optional(),
+}).passthrough();
 
-const YouTubeCommentSchema = z
-  .object({
-    id: z.string(),
-    snippet: z
-      .object({
-        authorDisplayName: z.string(),
-        textOriginal: z.string().optional(),
-        textDisplay: z.string().optional(),
-        likeCount: z.number().optional(),
-        publishedAt: z.string().optional(),
-      })
-      .passthrough(),
-  })
-  .passthrough();
+const YouTubeCommentSchema = z.object({
+  id: z.string(),
+  snippet: z.object({
+    authorDisplayName: z.string(),
+    textOriginal: z.string().optional(),
+    textDisplay: z.string().optional(),
+    likeCount: z.number().optional(),
+    publishedAt: z.string().optional(),
+  }).passthrough(),
+}).passthrough();
 
-const YouTubeCommentThreadSchema = z
-  .object({
-    nextPageToken: z.string().optional(),
-    items: z
-      .array(
-        z
-          .object({
-            id: z.string(),
-            snippet: z
-              .object({
-                totalReplyCount: z.number().optional().default(0),
-                topLevelComment: YouTubeCommentSchema,
-              })
-              .passthrough(),
-            replies: z
-              .object({
-                comments: z.array(YouTubeCommentSchema).optional(),
-              })
-              .passthrough()
-              .optional(),
-          })
-          .passthrough(),
-      )
-      .optional(),
-  })
-  .passthrough();
+const YouTubeCommentThreadSchema = z.object({
+  nextPageToken: z.string().optional(),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      snippet: z.object({
+        totalReplyCount: z.number().optional().default(0),
+        topLevelComment: YouTubeCommentSchema,
+      }).passthrough(),
+      replies: z.object({
+        comments: z.array(YouTubeCommentSchema).optional(),
+      }).passthrough().optional(),
+    }).passthrough()
+  ).optional(),
+}).passthrough();
 
-const YouTubeCommentsResponseSchema = z
-  .object({
-    nextPageToken: z.string().optional(),
-    items: z.array(YouTubeCommentSchema).optional(),
-  })
-  .passthrough();
+const YouTubeCommentsResponseSchema = z.object({
+  nextPageToken: z.string().optional(),
+  items: z.array(YouTubeCommentSchema).optional(),
+}).passthrough();
 
 // Cache global allowed origins
 const ALLOWED_PAGES_SUFFIX = ".rasalytics.pages.dev";
@@ -139,37 +106,14 @@ export default {
         const parsedBody = AnalyzeVideoSchema.safeParse(jsonBody);
 
         if (!parsedBody.success) {
-          // Trace the offending value. Log forging (CWE-117) mitigation:
-          // never interpolate raw user input into console.error. Encode the
-          // received value with JSON.stringify so control chars (\n, \r) and
-          // any non-string JS value are safely escaped into a single line.
-          // Truncate large values so an attacker cannot flood the log pipe.
-          const MAX_VALUE_CHARS = 500;
+          // Trace the offending value
           for (const issue of parsedBody.error.issues) {
             const pathStr = issue.path.join(".");
             let receivedValue: any = jsonBody;
             for (const key of issue.path) {
               receivedValue = receivedValue?.[key];
             }
-            let encodedValue: string;
-            try {
-              encodedValue = JSON.stringify(receivedValue);
-            } catch {
-              encodedValue = "[unserializable]";
-            }
-            if (typeof encodedValue === "string" && encodedValue.length > MAX_VALUE_CHARS) {
-              encodedValue = encodedValue.slice(0, MAX_VALUE_CHARS) + "...[truncated]";
-            }
-            console.error(
-              JSON.stringify({
-                timestamp: new Date().toISOString(),
-                route: "/api/analyze-video",
-                event: "validation_failed",
-                path: pathStr,
-                receivedValue: encodedValue,
-                message: issue.message,
-              }),
-            );
+            console.error(`Validation failed at field path "${pathStr}": received ${receivedValue}. Error: ${issue.message}`);
           }
 
           const errorMessage = parsedBody.error.issues.map((e) => e.message).join(", ");
@@ -202,10 +146,6 @@ export default {
 
         let subrequestCount = 0;
         const MAX_SUBREQUESTS = 45;
-        // Replies per-thread pagination cap. Deep reply chains are rare and a
-        // single hot thread can otherwise burn the entire subrequest budget.
-        // 3 pages * 100 = 300 replies covers >99% of real threads.
-        const REPLIES_MAX_PAGES = 3;
 
         // 1. Fetch Video Details
         let videoDetails = {
@@ -259,25 +199,19 @@ export default {
         let pageToken = "";
         let pageCount = 0;
 
-        // Hoist URL params — only pageToken varies per iteration
-        const threadsUrl = new URL("https://www.googleapis.com/youtube/v3/commentThreads");
-        threadsUrl.searchParams.set("part", "snippet,replies");
-        threadsUrl.searchParams.set("videoId", videoId);
-        threadsUrl.searchParams.set("key", apiKey);
-        threadsUrl.searchParams.set("maxResults", "100");
-        threadsUrl.searchParams.set("textFormat", "plainText");
-
         while (pageCount < maxPages) {
-          if (pageToken) {
-            threadsUrl.searchParams.set("pageToken", pageToken);
-          } else {
-            threadsUrl.searchParams.delete("pageToken");
-          }
+          const ytUrl = new URL("https://www.googleapis.com/youtube/v3/commentThreads");
+          ytUrl.searchParams.append("part", "snippet,replies");
+          ytUrl.searchParams.append("videoId", videoId);
+          ytUrl.searchParams.append("key", apiKey);
+          ytUrl.searchParams.append("maxResults", "100");
+          ytUrl.searchParams.append("textFormat", "plainText");
+          if (pageToken) ytUrl.searchParams.append("pageToken", pageToken);
 
           if (subrequestCount >= MAX_SUBREQUESTS) {
             break; // Circuit breaker: stop fetching pages to avoid 500 error
           }
-          const response = await fetch(threadsUrl.toString());
+          const response = await fetch(ytUrl.toString());
           subrequestCount++;
           if (!response.ok) {
             if (pageCount === 0) {
@@ -302,112 +236,82 @@ export default {
           const items = data.items || [];
           if (items.length === 0) break;
 
-          // Fan out per-thread reply fetches in parallel. Intra-stream
-          // (nextPageToken) sequencing is preserved inside each handler;
-          // cross-stream parallelism is the optimization. allSettled ensures
-          // one failing fetch doesn't abort siblings.
-          const repliesHandlers = await Promise.allSettled(
-            items.map(async (item) => {
-              const snippet = item.snippet.topLevelComment.snippet;
-              const collected: CommentData[] = [
-                {
-                  id: item.snippet.topLevelComment.id,
-                  author: snippet.authorDisplayName,
-                  text: snippet.textOriginal || snippet.textDisplay || "",
-                  likes: snippet.likeCount || 0,
-                  publishedAt: snippet.publishedAt,
-                },
-              ];
+          for (const item of items) {
+            const snippet = item.snippet.topLevelComment.snippet;
+            allComments.push({
+              id: item.snippet.topLevelComment.id,
+              author: snippet.authorDisplayName,
+              text: snippet.textOriginal || snippet.textDisplay || "",
+              likes: snippet.likeCount || 0,
+              publishedAt: snippet.publishedAt,
+            });
 
-              // Cache inline replies once per item for O(1) dedup against fetched replies
-              const inlineReplies = item.replies?.comments;
-              const inlineLen = inlineReplies?.length ?? 0;
-              const inlineReplyIds = new Set<string>();
-              if (inlineReplies) {
-                for (let i = 0; i < inlineLen; i++) inlineReplyIds.add(inlineReplies[i].id);
-                for (const reply of inlineReplies) {
-                  collected.push({
-                    id: reply.id,
-                    author: reply.snippet.authorDisplayName,
-                    text: reply.snippet.textOriginal || reply.snippet.textDisplay || "",
-                    likes: reply.snippet.likeCount || 0,
-                    publishedAt: reply.snippet.publishedAt,
-                  });
-                }
+            // Gather inline replies
+            if (item.replies && item.replies.comments) {
+              for (const reply of item.replies.comments) {
+                allComments.push({
+                  id: reply.id,
+                  author: reply.snippet.authorDisplayName,
+                  text: reply.snippet.textOriginal || reply.snippet.textDisplay || "",
+                  likes: reply.snippet.likeCount || 0,
+                  publishedAt: reply.snippet.publishedAt,
+                });
               }
+            }
 
-              // If there are more replies than returned inline, fetch them (up to REPLIES_MAX_PAGES)
-              if (item.snippet.totalReplyCount > inlineLen) {
-                // Circuit breaker: skip this thread's replies block if budget exhausted.
-                if (subrequestCount >= MAX_SUBREQUESTS) return collected;
+            // If there are more replies than returned inline, fetch them (up to 5 pages)
+            if (item.snippet.totalReplyCount > (item.replies?.comments?.length || 0)) {
+              let rPageToken = "";
+              let rPageCount = 0;
+              while (rPageCount < maxPages) {
+                try {
+                  const rUrl = new URL("https://www.googleapis.com/youtube/v3/comments");
+                  rUrl.searchParams.append("part", "snippet");
+                  rUrl.searchParams.append("parentId", item.id);
+                  rUrl.searchParams.append("key", apiKey);
+                  rUrl.searchParams.append("maxResults", "100");
+                  rUrl.searchParams.append("textFormat", "plainText");
+                  if (rPageToken) rUrl.searchParams.append("pageToken", rPageToken);
 
-                // Hoist reply URL — only rPageToken varies across iterations
-                const rUrl = new URL("https://www.googleapis.com/youtube/v3/comments");
-                rUrl.searchParams.set("part", "snippet");
-                rUrl.searchParams.set("parentId", item.id);
-                rUrl.searchParams.set("key", apiKey);
-                rUrl.searchParams.set("maxResults", "100");
-                rUrl.searchParams.set("textFormat", "plainText");
+                  if (subrequestCount >= MAX_SUBREQUESTS) {
+                    break; // Circuit breaker for replies
+                  }
+                  const rRes = await fetch(rUrl.toString());
+                  subrequestCount++;
+                  if (rRes.ok) {
+                    const rawRData = (await rRes.json()) as unknown;
+                    const parsedRData = YouTubeCommentsResponseSchema.safeParse(rawRData);
 
-                let rPageToken = "";
-                let rPageCount = 0;
-                while (rPageCount < REPLIES_MAX_PAGES) {
-                  try {
-                    if (rPageToken) {
-                      rUrl.searchParams.set("pageToken", rPageToken);
-                    } else {
-                      rUrl.searchParams.delete("pageToken");
-                    }
-
-                    if (subrequestCount >= MAX_SUBREQUESTS) {
-                      break; // Circuit breaker for replies
-                    }
-                    const rRes = await fetch(rUrl.toString());
-                    subrequestCount++;
-                    if (rRes.ok) {
-                      const rawRData = (await rRes.json()) as unknown;
-                      const parsedRData = YouTubeCommentsResponseSchema.safeParse(rawRData);
-
-                      if (parsedRData.success) {
-                        const rData = parsedRData.data;
-                        for (const reply of rData.items || []) {
-                          // O(1) dedup via Set built once per item
-                          if (!inlineReplyIds.has(reply.id)) {
-                            collected.push({
-                              id: reply.id,
-                              author: reply.snippet.authorDisplayName,
-                              text: reply.snippet.textOriginal || reply.snippet.textDisplay || "",
-                              likes: reply.snippet.likeCount || 0,
-                              publishedAt: reply.snippet.publishedAt,
-                            });
-                          }
+                    if (parsedRData.success) {
+                      const rData = parsedRData.data;
+                      for (const reply of rData.items || []) {
+                        // avoid duplicates by checking if we already have it
+                        const exists = item.replies?.comments?.some((c) => c.id === reply.id);
+                        if (!exists) {
+                          allComments.push({
+                            id: reply.id,
+                            author: reply.snippet.authorDisplayName,
+                            text: reply.snippet.textOriginal || reply.snippet.textDisplay || "",
+                            likes: reply.snippet.likeCount || 0,
+                            publishedAt: reply.snippet.publishedAt,
+                          });
                         }
-                        rPageToken = rData.nextPageToken || "";
-                        if (!rPageToken) break;
-                      } else {
-                        console.error("Failed to parse replies:", parsedRData.error.message);
-                        break;
                       }
+                      rPageToken = rData.nextPageToken || "";
+                      if (!rPageToken) break;
                     } else {
+                      console.error("Failed to parse replies:", parsedRData.error.message);
                       break;
                     }
-                  } catch (e) {
+                  } else {
                     break;
                   }
-                  rPageCount++;
+                } catch (e) {
+                  break;
                 }
+                rPageCount++;
               }
-              return collected;
-            }),
-          );
-
-          for (const result of repliesHandlers) {
-            if (result.status === "fulfilled") {
-              allComments.push(...result.value);
             }
-            // Rejected handlers silently drop that thread's replies — matches
-            // prior best-effort semantics where individual fetch failures
-            // broke out of the inner loop without aborting the request.
           }
 
           pageToken = data.nextPageToken;
@@ -543,17 +447,8 @@ export default {
             headers: { "Content-Type": "application/json", ...corsHeaders },
           },
         );
-      } catch (err) {
-        const e = err instanceof Error ? err : new Error(String(err));
-        console.error(
-          JSON.stringify({
-            timestamp: new Date().toISOString(),
-            route: "/api/analyze-video",
-            errorMessage: e.message,
-            errorName: e.name,
-            stack: e.stack,
-          }),
-        );
+      } catch (err: any) {
+        console.error("Worker error handling /api/analyze-video:", err);
         return new Response(JSON.stringify({ error: "Internal error" }), {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
