@@ -9,6 +9,12 @@ test("getShingles generates correct bigrams", () => {
   expect(shingles.has("world test")).toBe(true);
 });
 
+test("getShingles handles short text correctly", () => {
+  const shingles = getShingles("short", 2);
+  expect(shingles.size).toBe(1);
+  expect(shingles.has("short")).toBe(true);
+});
+
 test("jaccard similarity computes correctly", () => {
   const s1 = new Set(["a", "b", "c"]);
   const s2 = new Set(["b", "c", "d"]);
