@@ -170,8 +170,12 @@ export async function analyzeComment(text: string): Promise<{
     if (parts.length > 1) {
       let hasPos = false;
       let hasNeg = false;
-      for (const p of parts) {
-        const res = await cls(p);
+
+      const partResults = await Promise.all(parts.map((p) => cls(p)));
+
+      for (let j = 0; j < parts.length; j++) {
+        const p = parts[j];
+        const res = partResults[j];
         let partLabel = res[0].label.toUpperCase();
 
         let pLexScore = 0;
