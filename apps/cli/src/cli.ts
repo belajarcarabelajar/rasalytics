@@ -62,10 +62,10 @@ async function collectComments(videoId: string, maxPages: number, db: Database) 
     const items = data.items || [];
     if (items.length === 0) break;
 
-    const newComments: CommentData[] = [];
-    for (const item of items) {
+    const itemPromises = items.map(async (item: any) => {
+      const itemComments: CommentData[] = [];
       const topLevelComment = item.snippet.topLevelComment;
-      newComments.push(await processComment(topLevelComment.id, topLevelComment.snippet));
+      itemComments.push(await processComment(topLevelComment.id, topLevelComment.snippet));
 
       if (item.snippet.totalReplyCount > 0) {
         let replyPageToken: string | undefined = undefined;
@@ -73,15 +73,20 @@ async function collectComments(videoId: string, maxPages: number, db: Database) 
         while (replyCount < MAX_REPLY_PAGES) {
           const replyData = await fetchReplies(item.id, API_KEY!, replyPageToken);
           const replies = replyData.items || [];
-          for (const reply of replies) {
-            newComments.push(await processComment(reply.id, reply.snippet));
-          }
+          const processedReplies = await Promise.all(
+            replies.map((reply: any) => processComment(reply.id, reply.snippet)),
+          );
+          itemComments.push(...processedReplies);
           replyPageToken = replyData.nextPageToken;
           if (!replyPageToken) break;
           replyCount++;
         }
       }
-    }
+      return itemComments;
+    });
+
+    const resolvedComments = await Promise.all(itemPromises);
+    const newComments: CommentData[] = resolvedComments.flat();
 
     db.transaction(() => {
       for (const c of newComments) {
