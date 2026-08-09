@@ -42,7 +42,10 @@ export interface CommentData {
 }
 
 export function escapeMarkdown(text: string): string {
-  return text.replace(/\|/g, "\\|").replace(/\n/g, " ").replace(/\r/g, "");
+  return text
+    .replace(/([`*_[\]|])/g, "\\$1")
+    .replace(/\n/g, " ")
+    .replace(/\r/g, "");
 }
 
 import { preprocess, analyzeEdgeSafe } from "./shared-sentiment.js";
