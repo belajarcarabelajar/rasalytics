@@ -1,5 +1,5 @@
-import { emojiEmotion } from "emoji-emotion";
 import { idLexicon, toxicLexicon, slangDict, spamKeywords } from "./lexicons.js";
+import { emojiMap, emojiRegexFastUni, emojiRegexReplace } from "./emoji-utils.js";
 
 function analyzeWithLexicon(text: string, lexicon: Record<string, number>) {
   const words = text.split(/\s+/);
@@ -36,10 +36,8 @@ export function preprocess(text: string) {
   norm = norm.replace(/hebat ya bisa bikin orang bosen/g, " sangat membosankan ");
   norm = norm.replace(/kapan update lagi/g, " ditunggu kontennya bagus ");
 
-  for (const e of emojiEmotion as any[]) {
-    if (norm.includes(e.emoji)) {
-      norm = norm.replaceAll(e.emoji, ` ${e.name} `);
-    }
+  if (emojiRegexFastUni.test(norm)) {
+    norm = norm.replace(emojiRegexReplace, (match) => emojiMap.get(match)!);
   }
 
   // Negation handling for lexicon
