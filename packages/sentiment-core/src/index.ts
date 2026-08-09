@@ -3,8 +3,11 @@ import { writeFileSync, existsSync, unlinkSync } from "fs";
 import path from "path";
 import { emojiEmotion } from "emoji-emotion";
 import { idLexicon, toxicLexicon, slangDict, spamKeywords, conjunctions } from "./lexicons";
+import { emojiMap, emojiRegexFastUni, emojiRegexReplace } from "./emoji-utils";
 import { Database } from "bun:sqlite";
 import { pipeline, env } from "@xenova/transformers";
+
+let classifier: Function | "failed" | null = null;
 
 env.localModelPath = existsSync("./models")
   ? "./models"
@@ -52,8 +55,6 @@ import { preprocess, analyzeEdgeSafe } from "./shared-sentiment.js";
 export { preprocess, analyzeEdgeSafe };
 import { getShingles, jaccard } from "./forensics.js";
 export { getShingles, jaccard };
-
-let classifier: Function | "failed" | null = null;
 
 export async function getClassifier() {
   if (!classifier) {
@@ -107,10 +108,8 @@ export async function analyzeComment(text: string): Promise<{
   norm = norm.replace(/ga ada yang bagus/g, " semuanya jelek buruk ");
   norm = norm.replace(/gak ada yang bagus/g, " semuanya jelek buruk ");
 
-  for (const e of emojiEmotion as { emoji: string; name: string }[]) {
-    if (norm.includes(e.emoji)) {
-      norm = norm.replaceAll(e.emoji, ` ${e.name} `);
-    }
+  if (emojiRegexFastUni.test(norm)) {
+    norm = norm.replace(emojiRegexReplace, (match) => emojiMap.get(match)!);
   }
 
   norm = norm.replace(/(.)\1{2,}/g, "$1");
