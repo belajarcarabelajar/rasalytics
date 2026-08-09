@@ -268,7 +268,7 @@ async function exportOutputs(videoId: string, db: Database) {
 
   function sanitizeCsvField(text: string): string {
     let escaped = (text || "").replace(/"/g, '""');
-    if (/^[=\+\-@]/.test(escaped)) {
+    if (/^\s*[=\+\-@]/.test(escaped)) {
       escaped = "'" + escaped;
     }
     return escaped;
