@@ -23,7 +23,7 @@ const API_KEY = process.env.YOUTUBE_API_KEY;
 const MAX_REPLY_PAGES = 5;
 
 // Initialize Database
-export function setupDatabase(dbPath: string): Database {
+function setupDatabase(dbPath: string): Database {
   const db = new Database(dbPath);
   db.run(`CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT)`);
   db.run(`CREATE TABLE IF NOT EXISTS comments (
@@ -36,7 +36,7 @@ export function setupDatabase(dbPath: string): Database {
 }
 
 // Fetch Comments from API
-export async function collectComments(videoId: string, maxPages: number, db: Database) {
+async function collectComments(videoId: string, maxPages: number, db: Database) {
   let pageToken: string | undefined = undefined;
   const tokenRes = db
     .query("SELECT value FROM metadata WHERE key = 'last_page_token'")
@@ -149,72 +149,41 @@ export async function collectComments(videoId: string, maxPages: number, db: Dat
   }
 }
 
-interface SentimentStats {
-  totalCount: number;
-  positive: number;
-  negative: number;
-  neutral: number;
-  mixed: number;
-  spam: number;
-  toxic: number;
-  buzzer: number;
-}
+async function exportOutputs(videoId: string, db: Database) {
+  if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+    throw new Error("Invalid videoId");
+  }
+  const totalCount = (db.query("SELECT COUNT(*) as count FROM comments").get() as any).count;
+  if (totalCount === 0) return;
 
-interface VideoDetails {
-  videoTitle: string;
-  channelName: string;
-  viewCount: string;
-  likeCount: string;
-  commentCount: string;
-}
-
-interface CountRow {
-  count?: number;
-  c?: number;
-}
-
-export function getSentimentStats(db: Database): SentimentStats {
-  const totalCount =
-    (db.query("SELECT COUNT(*) as count FROM comments").get() as CountRow)?.count ?? 0;
   const positive = (
-    db
-      .query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='POSITIVE'")
-      .get() as CountRow
-  )?.c ?? 0;
+    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='POSITIVE'").get() as any
+  ).c;
   const negative = (
-    db
-      .query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='NEGATIVE'")
-      .get() as CountRow
-  )?.c ?? 0;
+    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='NEGATIVE'").get() as any
+  ).c;
   const neutral = (
-    db
-      .query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='NEUTRAL'")
-      .get() as CountRow
-  )?.c ?? 0;
+    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='NEUTRAL'").get() as any
+  ).c;
   const mixed = (
-    db
-      .query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='MIXED'")
-      .get() as CountRow
-  )?.c ?? 0;
-  const spam =
-    (db.query("SELECT COUNT(*) as c FROM comments WHERE spam_flag=1").get() as CountRow)?.c ?? 0;
-  const toxic =
-    (db.query("SELECT COUNT(*) as c FROM comments WHERE toxic_flag=1").get() as CountRow)?.c ?? 0;
-  const buzzer =
-    (db.query("SELECT COUNT(*) as c FROM comments WHERE is_buzzer=1").get() as CountRow)?.c ?? 0;
-  return { totalCount, positive, negative, neutral, mixed, spam, toxic, buzzer };
-}
+    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='MIXED'").get() as any
+  ).c;
+  const spam = (db.query("SELECT COUNT(*) as c FROM comments WHERE spam_flag=1").get() as any).c;
+  const toxic = (db.query("SELECT COUNT(*) as c FROM comments WHERE toxic_flag=1").get() as any).c;
+  const buzzer = (db.query("SELECT COUNT(*) as c FROM comments WHERE is_buzzer=1").get() as any).c;
 
-export function getTopComments(db: Database, label: string, limit: number): any[] {
-  return db
+  const topPositive = db
     .query(
-      `SELECT * FROM comments WHERE sentiment_label=? AND spam_flag=0 AND toxic_flag=0 AND is_buzzer=0 ORDER BY like_count DESC LIMIT ?`,
+      "SELECT * FROM comments WHERE sentiment_label='POSITIVE' AND spam_flag=0 AND toxic_flag=0 AND is_buzzer=0 ORDER BY like_count DESC LIMIT 5",
     )
-    .all(label, limit) as any[];
-}
+    .all() as any[];
+  const topNegative = db
+    .query(
+      "SELECT * FROM comments WHERE sentiment_label='NEGATIVE' AND spam_flag=0 AND toxic_flag=0 AND is_buzzer=0 ORDER BY like_count DESC LIMIT 5",
+    )
+    .all() as any[];
 
-export function getBuzzerRings(db: Database): any[] {
-  return db
+  const buzzerRings = db
     .query(
       `
     SELECT buzzer_group_id, COUNT(*) as buzz_count, raw_text
@@ -226,10 +195,8 @@ export function getBuzzerRings(db: Database): any[] {
   `,
     )
     .all() as any[];
-}
 
-export function getTimeSeries(db: Database): any[] {
-  return db
+  const timeSeries = db
     .query(
       `
     SELECT
@@ -243,163 +210,112 @@ export function getTimeSeries(db: Database): any[] {
   `,
     )
     .all() as any[];
-}
-
-export async function fetchVideoDetails(videoId: string, apiKey: string): Promise<VideoDetails> {
-  const fallback: VideoDetails = {
-    videoTitle: "Unknown Title",
-    channelName: "Unknown Channel",
-    viewCount: "0",
-    likeCount: "0",
-    commentCount: "0",
-  };
-  try {
-    const vUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
-    vUrl.searchParams.append("part", "snippet,statistics");
-    vUrl.searchParams.append("id", videoId);
-    vUrl.searchParams.append("key", apiKey);
-    const vRes = await fetch(vUrl.toString());
-    if (!vRes.ok) return fallback;
-    const vData = (await vRes.json()) as any;
-    if (!vData.items || vData.items.length === 0) return fallback;
-    const vInfo = vData.items[0];
-    return {
-      videoTitle: vInfo.snippet.title,
-      channelName: vInfo.snippet.channelTitle,
-      viewCount: parseInt(vInfo.statistics.viewCount || "0").toLocaleString(),
-      likeCount: parseInt(vInfo.statistics.likeCount || "0").toLocaleString(),
-      commentCount: parseInt(vInfo.statistics.commentCount || "0").toLocaleString(),
-    };
-  } catch (e) {
-    console.error("Failed to fetch video details:", e);
-    return fallback;
-  }
-}
-
-export function sanitizeCsvField(text: string): string {
-  let escaped = (text || "").replace(/"/g, '""');
-  if (/^[=\+\-@]/.test(escaped)) {
-    escaped = "'" + escaped;
-  }
-  return escaped;
-}
-
-export function buildCsvLines(rows: any[], includeFlags: boolean): string[] {
-  const header = includeFlags
-    ? "comment_id,author,sentiment_label,is_spam,is_toxic,is_buzzer,buzzer_group_id,raw_text"
-    : "comment_id,author,sentiment_label,raw_text";
-  const lines = [header];
-  for (const r of rows) {
-    const escapedText = sanitizeCsvField(r.raw_text);
-    const escapedAuthor = sanitizeCsvField(r.author);
-    if (includeFlags) {
-      lines.push(
-        `"${r.comment_id}","${escapedAuthor}","${r.sentiment_label}",${r.spam_flag},${r.toxic_flag},${r.is_buzzer},"${r.buzzer_group_id}","${escapedText}"`,
-      );
-    } else {
-      lines.push(`"${r.comment_id}","${escapedAuthor}","${r.sentiment_label}","${escapedText}"`);
-    }
-  }
-  return lines;
-}
-
-export function writeReport(
-  mdPath: string,
-  csvPath: string,
-  cleanCsvPath: string,
-  args: {
-    videoId: string;
-    video: VideoDetails;
-    stats: SentimentStats;
-    xDates: string;
-    posCounts: string;
-    negCounts: string;
-    wordcloudPath: string;
-    topPositive: any[];
-    topNegative: any[];
-    buzzerRings: any[];
-  },
-  db: Database,
-): void {
-  const markdownLines = generateMarkdownReport({
-    VIDEO_ID: args.videoId,
-    MODEL_VERSION: "v8.0-roberta-hybrid",
-    videoTitle: args.video.videoTitle,
-    channelName: args.video.channelName,
-    viewCount: args.video.viewCount,
-    likeCount: args.video.likeCount,
-    commentCount: args.video.commentCount,
-    positive: args.stats.positive,
-    negative: args.stats.negative,
-    neutral: args.stats.neutral,
-    mixed: args.stats.mixed,
-    xDates: args.xDates,
-    posCounts: args.posCounts,
-    negCounts: args.negCounts,
-    wordcloudPath: args.wordcloudPath,
-    totalCount: args.stats.totalCount,
-    spam: args.stats.spam,
-    toxic: args.stats.toxic,
-    buzzer: args.stats.buzzer,
-    topPositive: args.topPositive,
-    topNegative: args.topNegative,
-    buzzerRings: args.buzzerRings,
-  });
-  writeFileSync(mdPath, markdownLines.join("\n"), "utf-8");
-
-  const allRows = db.query("SELECT * FROM comments").all() as any[];
-  writeFileSync(csvPath, buildCsvLines(allRows, true).join("\n"), "utf-8");
-
-  const cleanRows = db
-    .query("SELECT * FROM comments WHERE spam_flag=0 AND toxic_flag=0 AND is_buzzer=0")
-    .all() as any[];
-  writeFileSync(cleanCsvPath, buildCsvLines(cleanRows, false).join("\n"), "utf-8");
-}
-
-export async function exportOutputs(videoId: string, db: Database) {
-  if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-    throw new Error("Invalid videoId");
-  }
-  const stats = getSentimentStats(db);
-  if (stats.totalCount === 0) return;
-
-  const video = await fetchVideoDetails(videoId, API_KEY!);
-  const topPositive = getTopComments(db, "POSITIVE", 5);
-  const topNegative = getTopComments(db, "NEGATIVE", 5);
-  const buzzerRings = getBuzzerRings(db);
-  const timeSeries = getTimeSeries(db);
   const xDates = timeSeries.map((r) => `"${r.date}"`).join(", ");
   const posCounts = timeSeries.map((r) => r.pos).join(", ");
   const negCounts = timeSeries.map((r) => r.neg).join(", ");
 
-  writeReport(
-    `./comments_${videoId}.md`,
-    `./comments_${videoId}.csv`,
-    `./comments_${videoId}_clean.csv`,
-    {
-      videoId,
-      video,
-      stats,
-      xDates,
-      posCounts,
-      negCounts,
-      wordcloudPath: "",
-      topPositive,
-      topNegative,
-      buzzerRings,
-    },
-    db,
-  );
+  let wordcloudPath = "";
+  let videoTitle = "Unknown Title";
+  let channelName = "Unknown Channel";
+  let viewCount = "0";
+  let likeCount = "0";
+  let commentCount = "0";
+
+  try {
+    const vUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
+    vUrl.searchParams.append("part", "snippet,statistics");
+    vUrl.searchParams.append("id", videoId);
+    vUrl.searchParams.append("key", API_KEY!);
+    const vRes = await fetch(vUrl.toString());
+    if (vRes.ok) {
+      const vData = (await vRes.json()) as any;
+      if (vData.items && vData.items.length > 0) {
+        const vInfo = vData.items[0];
+        videoTitle = vInfo.snippet.title;
+        channelName = vInfo.snippet.channelTitle;
+        viewCount = parseInt(vInfo.statistics.viewCount || "0").toLocaleString();
+        likeCount = parseInt(vInfo.statistics.likeCount || "0").toLocaleString();
+        commentCount = parseInt(vInfo.statistics.commentCount || "0").toLocaleString();
+      }
+    }
+  } catch (e) {
+    console.error("Failed to fetch video details:", e);
+  }
+
+  const markdownLines = generateMarkdownReport({
+    VIDEO_ID: videoId,
+    MODEL_VERSION: "v8.0-roberta-hybrid",
+    videoTitle,
+    channelName,
+    viewCount,
+    likeCount,
+    commentCount,
+    positive,
+    negative,
+    neutral,
+    mixed,
+    xDates,
+    posCounts,
+    negCounts,
+    wordcloudPath,
+    totalCount,
+    spam,
+    toxic,
+    buzzer,
+    topPositive,
+    topNegative,
+    buzzerRings,
+  });
+
+  const mdPath = `./comments_${videoId}.md`;
+  const csvPath = `./comments_${videoId}.csv`;
+  const cleanCsvPath = `./comments_${videoId}_clean.csv`;
+
+  function sanitizeCsvField(text: string): string {
+    let escaped = (text || "").replace(/"/g, '""');
+    if (/^[=\+\-@]/.test(escaped)) {
+      escaped = "'" + escaped;
+    }
+    return escaped;
+  }
+
+  writeFileSync(mdPath, markdownLines.join("\n"), "utf-8");
+
+  const allRows = db.query("SELECT * FROM comments").all() as any[];
+  const csvLines = [
+    "comment_id,author,sentiment_label,is_spam,is_toxic,is_buzzer,buzzer_group_id,raw_text",
+  ];
+  for (const r of allRows) {
+    const escapedText = sanitizeCsvField(r.raw_text);
+    const escapedAuthor = sanitizeCsvField(r.author);
+    csvLines.push(
+      `"${r.comment_id}","${escapedAuthor}","${r.sentiment_label}",${r.spam_flag},${r.toxic_flag},${r.is_buzzer},"${r.buzzer_group_id}","${escapedText}"`,
+    );
+  }
+  writeFileSync(csvPath, csvLines.join("\n"), "utf-8");
+
+  const cleanRows = db
+    .query("SELECT * FROM comments WHERE spam_flag=0 AND toxic_flag=0 AND is_buzzer=0")
+    .all() as any[];
+  const cleanCsvLines = ["comment_id,author,sentiment_label,raw_text"];
+  for (const r of cleanRows) {
+    const escapedText = sanitizeCsvField(r.raw_text);
+    const escapedAuthor = sanitizeCsvField(r.author);
+    cleanCsvLines.push(
+      `"${r.comment_id}","${escapedAuthor}","${r.sentiment_label}","${escapedText}"`,
+    );
+  }
+  writeFileSync(cleanCsvPath, cleanCsvLines.join("\n"), "utf-8");
 
   console.log(`\n=== SENTIMENT RECAP ===`);
-  console.log(`Total Comments: ${stats.totalCount}`);
-  console.log(`Positive: ${stats.positive}`);
-  console.log(`Negative: ${stats.negative}`);
-  console.log(`Neutral: ${stats.neutral}`);
-  console.log(`Mixed: ${stats.mixed}`);
-  console.log(`Spam: ${stats.spam}`);
-  console.log(`Toxic: ${stats.toxic}`);
-  console.log(`Buzzer: ${stats.buzzer}`);
+  console.log(`Total Comments: ${totalCount}`);
+  console.log(`Positive: ${positive}`);
+  console.log(`Negative: ${negative}`);
+  console.log(`Neutral: ${neutral}`);
+  console.log(`Mixed: ${mixed}`);
+  console.log(`Spam: ${spam}`);
+  console.log(`Toxic: ${toxic}`);
+  console.log(`Buzzer: ${buzzer}`);
   console.log(`=======================`);
 }
 
