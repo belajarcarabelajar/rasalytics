@@ -20,39 +20,63 @@ test("POST /api/analyze-video with invalid body returns 400 error", async () => 
   expect(data.error).toContain("Missing videoId");
 });
 
+test("POST /api/analyze-video logs validation errors without log injection", async () => {
+  const consoleErrorSpy = spyOn(console, "error").mockImplementation(() => {});
+
+  const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ videoId: "valid_id", maxPages: "100\n\r injection" }),
+  });
+
+  const env = { YOUTUBE_API_KEY: "dummy" };
+  const ctx = {};
+
+  const response = await worker.fetch(request, env, ctx);
+  expect(response.status).toBe(400);
+
+  expect(consoleErrorSpy).toHaveBeenCalled();
+  const lastCall = consoleErrorSpy.mock.calls[consoleErrorSpy.mock.calls.length - 1][0];
+  expect(lastCall).not.toContain("\n");
+  expect(lastCall).not.toContain("\r");
+
+  consoleErrorSpy.mockRestore();
+});
+
 test("POST /api/analyze-video handles video details fetch error gracefully", async () => {
-  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
-    (async (url: any) => {
-      const urlStr = String(url);
-      if (urlStr.includes("youtube/v3/videos")) {
-        throw new Error("Simulated network error fetching video details");
-      }
-      if (urlStr.includes("youtube/v3/commentThreads")) {
-        return new Response(
-          JSON.stringify({
-            items: [
-              {
-                snippet: {
-                  topLevelComment: {
-                    id: "comment_id_1",
-                    snippet: {
-                      authorDisplayName: "Mock User",
-                      textOriginal: "This is a mock comment.",
-                      likeCount: 10,
-                      publishedAt: "2026-07-06T00:00:00Z",
-                    },
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: any) => {
+    const urlStr = String(url);
+    if (urlStr.includes("youtube/v3/videos")) {
+      throw new Error("Simulated network error fetching video details");
+    }
+    if (urlStr.includes("youtube/v3/commentThreads")) {
+      return new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: "thread_id_1",
+              snippet: {
+                topLevelComment: {
+                  id: "comment_id_1",
+                  snippet: {
+                    authorDisplayName: "Mock User",
+                    textOriginal: "This is a mock comment.",
+                    likeCount: 10,
+                    publishedAt: "2026-07-06T00:00:00Z",
                   },
-                  totalReplyCount: 0,
                 },
+                totalReplyCount: 0,
               },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      return new Response(JSON.stringify({}), { status: 200 });
-    }) as any
-  );
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(JSON.stringify({}), { status: 200 });
+  }) as any);
 
   const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
     method: "POST",
@@ -81,49 +105,47 @@ test("POST /api/analyze-video handles video details fetch error gracefully", asy
 });
 
 test("POST /api/analyze-video with maxPages exactly the boundary (10) passes validation", async () => {
-  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
-    (async (url: any) => {
-      const urlStr = String(url);
-      if (urlStr.includes("youtube/v3/videos")) {
-        return new Response(
-          JSON.stringify({
-            items: [
-              {
-                snippet: { title: "Mock Video", channelTitle: "Mock Channel" },
-                statistics: { viewCount: "100", likeCount: "50", commentCount: "5" },
-              },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      if (urlStr.includes("youtube/v3/commentThreads")) {
-        return new Response(
-          JSON.stringify({
-            items: [
-              {
-                snippet: {
-                  topLevelComment: {
-                    id: "comment_id_1",
-                    snippet: {
-                      authorDisplayName: "Mock User",
-                      textOriginal: "This is a mock comment.",
-                      likeCount: 10,
-                      publishedAt: "2026-07-06T00:00:00Z",
-                    },
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: any) => {
+    const urlStr = String(url);
+    if (urlStr.includes("youtube/v3/videos")) {
+      return new Response(
+        JSON.stringify({
+          items: [
+            {
+              snippet: { title: "Mock Video", channelTitle: "Mock Channel" },
+              statistics: { viewCount: "100", likeCount: "50", commentCount: "5" },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (urlStr.includes("youtube/v3/commentThreads")) {
+      return new Response(
+        JSON.stringify({
+          items: [
+            {
+              snippet: {
+                topLevelComment: {
+                  id: "comment_id_1",
+                  snippet: {
+                    authorDisplayName: "Mock User",
+                    textOriginal: "This is a mock comment.",
+                    likeCount: 10,
+                    publishedAt: "2026-07-06T00:00:00Z",
                   },
-                  totalReplyCount: 0,
                 },
-                id: "thread_id_1",
+                totalReplyCount: 0,
               },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      return new Response(JSON.stringify({}), { status: 200 });
-    }) as any
-  );
+              id: "thread_id_1",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(JSON.stringify({}), { status: 200 });
+  }) as any);
 
   const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
     method: "POST",
@@ -148,49 +170,47 @@ test("POST /api/analyze-video with maxPages exactly the boundary (10) passes val
 });
 
 test("POST /api/analyze-video with maxPages one below the boundary (9) passes validation", async () => {
-  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
-    (async (url: any) => {
-      const urlStr = String(url);
-      if (urlStr.includes("youtube/v3/videos")) {
-        return new Response(
-          JSON.stringify({
-            items: [
-              {
-                snippet: { title: "Mock Video 2", channelTitle: "Mock Channel 2" },
-                statistics: { viewCount: "100", likeCount: "50", commentCount: "5" },
-              },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      if (urlStr.includes("youtube/v3/commentThreads")) {
-        return new Response(
-          JSON.stringify({
-            items: [
-              {
-                snippet: {
-                  topLevelComment: {
-                    id: "comment_id_2",
-                    snippet: {
-                      authorDisplayName: "Mock User 2",
-                      textOriginal: "This is another mock comment.",
-                      likeCount: 5,
-                      publishedAt: "2026-07-06T00:00:00Z",
-                    },
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: any) => {
+    const urlStr = String(url);
+    if (urlStr.includes("youtube/v3/videos")) {
+      return new Response(
+        JSON.stringify({
+          items: [
+            {
+              snippet: { title: "Mock Video 2", channelTitle: "Mock Channel 2" },
+              statistics: { viewCount: "100", likeCount: "50", commentCount: "5" },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (urlStr.includes("youtube/v3/commentThreads")) {
+      return new Response(
+        JSON.stringify({
+          items: [
+            {
+              snippet: {
+                topLevelComment: {
+                  id: "comment_id_2",
+                  snippet: {
+                    authorDisplayName: "Mock User 2",
+                    textOriginal: "This is another mock comment.",
+                    likeCount: 5,
+                    publishedAt: "2026-07-06T00:00:00Z",
                   },
-                  totalReplyCount: 0,
                 },
-                id: "thread_id_2",
+                totalReplyCount: 0,
               },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      return new Response(JSON.stringify({}), { status: 200 });
-    }) as any
-  );
+              id: "thread_id_2",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    return new Response(JSON.stringify({}), { status: 200 });
+  }) as any);
 
   const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
     method: "POST",
@@ -238,55 +258,53 @@ test("POST /api/analyze-video with maxPages one above the boundary (11) fails va
 });
 
 test("POST /api/analyze-video handles fetch replies exception gracefully", async () => {
-  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
-    (async (url: any) => {
-      const urlStr = String(url);
-      if (urlStr.includes("youtube/v3/videos")) {
-        return new Response(
-          JSON.stringify({
-            items: [
-              {
-                snippet: { title: "Mock Video", channelTitle: "Mock Channel" },
-                statistics: { viewCount: "100", likeCount: "50", commentCount: "5" },
-              },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      if (urlStr.includes("youtube/v3/commentThreads")) {
-        return new Response(
-          JSON.stringify({
-            items: [
-              {
-                id: "parent_comment_1",
-                snippet: {
-                  topLevelComment: {
-                    id: "comment_id_1",
-                    snippet: {
-                      authorDisplayName: "Mock User",
-                      textOriginal: "This is a mock comment.",
-                      likeCount: 10,
-                      publishedAt: "2026-07-06T00:00:00Z",
-                    },
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: any) => {
+    const urlStr = String(url);
+    if (urlStr.includes("youtube/v3/videos")) {
+      return new Response(
+        JSON.stringify({
+          items: [
+            {
+              snippet: { title: "Mock Video", channelTitle: "Mock Channel" },
+              statistics: { viewCount: "100", likeCount: "50", commentCount: "5" },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (urlStr.includes("youtube/v3/commentThreads")) {
+      return new Response(
+        JSON.stringify({
+          items: [
+            {
+              id: "parent_comment_1",
+              snippet: {
+                topLevelComment: {
+                  id: "comment_id_1",
+                  snippet: {
+                    authorDisplayName: "Mock User",
+                    textOriginal: "This is a mock comment.",
+                    likeCount: 10,
+                    publishedAt: "2026-07-06T00:00:00Z",
                   },
-                  totalReplyCount: 1, // Triggers fetch to /youtube/v3/comments
                 },
-                replies: {
-                  comments: [] // No inline replies, forcing the fetch
-                }
+                totalReplyCount: 1, // Triggers fetch to /youtube/v3/comments
               },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-      if (urlStr.includes("youtube/v3/comments")) {
-        throw new Error("Simulated network error fetching replies");
-      }
-      return new Response(JSON.stringify({}), { status: 200 });
-    }) as any
-  );
+              replies: {
+                comments: [], // No inline replies, forcing the fetch
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    if (urlStr.includes("youtube/v3/comments")) {
+      throw new Error("Simulated network error fetching replies");
+    }
+    return new Response(JSON.stringify({}), { status: 200 });
+  }) as any);
 
   const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
     method: "POST",
