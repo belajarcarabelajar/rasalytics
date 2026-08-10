@@ -375,50 +375,36 @@ export interface ReportData {
   buzzerRings: any[];
 }
 
-export function generateMarkdownReport(data: ReportData): string[] {
-  const {
-    VIDEO_ID,
-    MODEL_VERSION,
-    videoTitle,
-    channelName,
-    viewCount,
-    likeCount,
-    commentCount,
-    positive,
-    negative,
-    neutral,
-    mixed,
-    xDates,
-    posCounts,
-    negCounts,
-    wordcloudPath,
-    totalCount,
-    spam,
-    toxic,
-    buzzer,
-    topPositive,
-    topNegative,
-    buzzerRings,
-  } = data;
+function generateHeaderSection(data: ReportData): string[] {
   return [
-    `# YouTube Comments Analysis: ${VIDEO_ID}`,
-    `*Model Version: ${MODEL_VERSION}*`,
+    `# YouTube Comments Analysis: ${data.VIDEO_ID}`,
+    `*Model Version: ${data.MODEL_VERSION}*`,
     ``,
+  ];
+}
+
+function generateVideoDetailsSection(data: ReportData): string[] {
+  return [
     `## 🎥 Video Details`,
-    `- **Title:** ${videoTitle}`,
-    `- **Channel:** ${channelName}`,
-    `- **Views:** ${viewCount}`,
-    `- **Likes:** ${likeCount}`,
-    `- **Total Comments (API):** ${commentCount}`,
+    `- **Title:** ${data.videoTitle}`,
+    `- **Channel:** ${data.channelName}`,
+    `- **Views:** ${data.viewCount}`,
+    `- **Likes:** ${data.likeCount}`,
+    `- **Total Comments (API):** ${data.commentCount}`,
     ``,
+  ];
+}
+
+function generateChartsSection(data: ReportData): string[] {
+  return [
     `## 📊 Summary & Actionable Insights`,
     ``,
     `\`\`\`mermaid`,
     `pie title Sentiment Distribution`,
-    `    "Positive" : ${positive}`,
-    `    "Negative" : ${negative}`,
-    `    "Neutral" : ${neutral}`,
-    `    "Mixed" : ${mixed}`,
+    `    "Positive" : ${data.positive}`,
+    `    "Negative" : ${data.negative}`,
+    `    "Neutral" : ${data.neutral}`,
+    `    "Mixed" : ${data.mixed}`,
     `\`\`\``,
     ``,
     `## 📈 Sentiment Over Time`,
@@ -426,53 +412,68 @@ export function generateMarkdownReport(data: ReportData): string[] {
     `\`\`\`mermaid`,
     `xychart-beta`,
     `    title "Sentiment Trend (Positive vs Negative)"`,
-    `    x-axis [${xDates}]`,
+    `    x-axis [${data.xDates}]`,
     `    y-axis "Count"`,
-    `    line [${posCounts}]`,
-    `    line [${negCounts}]`,
+    `    line [${data.posCounts}]`,
+    `    line [${data.negCounts}]`,
     `\`\`\``,
     ``,
     `## ☁️ Word Cloud (Top Themes)`,
-    wordcloudPath
-      ? `![Word Cloud](${wordcloudPath})`
+    data.wordcloudPath
+      ? `![Word Cloud](${data.wordcloudPath})`
       : `*Word cloud generation failed or not enough data.*`,
     ``,
-    `- **Total Comments:** ${totalCount}`,
-    `- **Positive:** ${positive} (${((positive / totalCount) * 100).toFixed(1)}%)`,
-    `- **Negative:** ${negative} (${((negative / totalCount) * 100).toFixed(1)}%)`,
-    `- **Neutral:** ${neutral}`,
-    `- **Mixed:** ${mixed}`,
-    `- **Spam Ratio:** ${((spam / totalCount) * 100).toFixed(1)}% (${spam} comments)`,
-    `- **Toxicity Ratio:** ${((toxic / totalCount) * 100).toFixed(1)}% (${toxic} comments)`,
-    `- **Buzzer/Copas Ratio:** ${((buzzer / totalCount) * 100).toFixed(1)}% (${buzzer} suspected)`,
+  ];
+}
+
+function generateStatsAndTakeawaysSection(data: ReportData): string[] {
+  return [
+    `- **Total Comments:** ${data.totalCount}`,
+    `- **Positive:** ${data.positive} (${((data.positive / data.totalCount) * 100).toFixed(1)}%)`,
+    `- **Negative:** ${data.negative} (${((data.negative / data.totalCount) * 100).toFixed(1)}%)`,
+    `- **Neutral:** ${data.neutral}`,
+    `- **Mixed:** ${data.mixed}`,
+    `- **Spam Ratio:** ${((data.spam / data.totalCount) * 100).toFixed(1)}% (${data.spam} comments)`,
+    `- **Toxicity Ratio:** ${((data.toxic / data.totalCount) * 100).toFixed(1)}% (${data.toxic} comments)`,
+    `- **Buzzer/Copas Ratio:** ${((data.buzzer / data.totalCount) * 100).toFixed(1)}% (${data.buzzer} suspected)`,
     ``,
     `### 💡 Key Takeaways`,
-    `The video received predominantly ${positive > negative ? "Positive" : "Negative"} feedback.`,
-    spam > totalCount * 0.1
+    `The video received predominantly ${data.positive > data.negative ? "Positive" : "Negative"} feedback.`,
+    data.spam > data.totalCount * 0.1
       ? `⚠️ **Warning:** High spam activity detected.`
       : `✅ Spam levels are normal.`,
-    toxic > totalCount * 0.05
+    data.toxic > data.totalCount * 0.05
       ? `⚠️ **Warning:** High toxicity levels detected.`
       : `✅ Community toxicity is low.`,
-    buzzer > totalCount * 0.05
+    data.buzzer > data.totalCount * 0.05
       ? `🚨 **Alert:** Significant organized Buzzer/Astroturfing activity detected.`
       : `✅ Inorganic buzzer manipulation is low.`,
     ``,
+  ];
+}
+
+function generateTopCommentsSection(data: ReportData): string[] {
+  return [
     `## 🌟 Top 5 Positive Comments`,
-    ...topPositive.map(
+    ...data.topPositive.map(
       (c) =>
         `- **${c.author}** (${c.like_count} likes): "${c.raw_text}" (Confidence: ${c.confidence_score}%)`,
     ),
     ``,
     `## 🚨 Top 5 Negative Comments`,
-    ...topNegative.map(
+    ...data.topNegative.map(
       (c) =>
         `- **${c.author}** (${c.like_count} likes): "${c.raw_text}" (Confidence: ${c.confidence_score}%)`,
     ),
     ``,
+  ];
+}
+
+function generateBuzzerForensicsSection(data: ReportData): string[] {
+  return [
     `## 🕸️ Top Buzzer Rings Forensics`,
-    buzzerRings.length > 0
-      ? buzzerRings
+    data.buzzerRings.length > 0
+      ? data.buzzerRings
           .map(
             (r) =>
               `- **Ring ID:** ${r.buzzer_group_id} | **Size:** ${r.buzz_count + 1} identical comments | **Template:** "${escapeMarkdown(r.raw_text)}"`,
@@ -481,5 +482,16 @@ export function generateMarkdownReport(data: ReportData): string[] {
       : `No significant buzzer rings detected.`,
     ``,
     `*Note: Full raw data has been exported to CSV.*`,
+  ];
+}
+
+export function generateMarkdownReport(data: ReportData): string[] {
+  return [
+    ...generateHeaderSection(data),
+    ...generateVideoDetailsSection(data),
+    ...generateChartsSection(data),
+    ...generateStatsAndTakeawaysSection(data),
+    ...generateTopCommentsSection(data),
+    ...generateBuzzerForensicsSection(data),
   ];
 }
