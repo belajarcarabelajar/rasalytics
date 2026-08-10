@@ -1,5 +1,6 @@
 import { analyzeComment } from "@rasalytics/sentiment-core";
 import fs from "fs";
+import pLimit from "p-limit";
 
 async function main() {
   const data = JSON.parse(fs.readFileSync("data/fixtures/benchmark.json", "utf8"));
@@ -14,8 +15,18 @@ async function main() {
     TOXIC: { tp: 0, fp: 0, fn: 0 },
   };
 
-  for (const item of data) {
-    const { label, score, confidence, reasoning } = await analyzeComment(item.text);
+  const limit = pLimit(5); // Limit concurrency to 5
+
+  const results = await Promise.all(
+    data.map((item: { text: string; expected: string }) =>
+      limit(async () => {
+        const { label, score, confidence, reasoning } = await analyzeComment(item.text);
+        return { item, label, score, confidence, reasoning };
+      }),
+    ),
+  );
+
+  for (const { item, label, score, confidence, reasoning } of results) {
     if (label === item.expected) {
       correct++;
       metrics[item.expected].tp++;
