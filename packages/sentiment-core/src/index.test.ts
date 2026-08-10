@@ -168,3 +168,21 @@ test("generateMarkdownReport renders correctly with deterministic data", () => {
     '**Ring ID:** group1 | **Size:** 2 identical comments | **Template:** "Copas comment"',
   );
 });
+
+test("fetchWithRetry handles 403 error with non-JSON response body correctly", async () => {
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation(async () => {
+    return new Response("<html>nginx 403 forbidden</html>", {
+      status: 403,
+      headers: { "Content-Type": "text/html" },
+    });
+  });
+
+  try {
+    await fetchWithRetry("http://fake-url.com", 1, 10);
+    expect(true).toBe(false); // should not reach here
+  } catch (e) {
+    expect((e as Error).message).toContain("API Error 403: <html>nginx 403 forbidden</html>");
+  }
+
+  fetchSpy.mockRestore();
+});
