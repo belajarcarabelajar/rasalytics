@@ -12,7 +12,7 @@ let classifier: Function | "failed" | null = null;
 env.localModelPath = existsSync("./models")
   ? "./models"
   : path.join(import.meta.dirname, "../../../models");
-env.allowRemoteModels = false;
+env.allowRemoteModels = process.env.CI === "true" || process.env.allowRemoteModels === "true";
 
 const MODEL_VERSION = "v8.0-roberta-hybrid";
 
