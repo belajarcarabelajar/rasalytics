@@ -32,7 +32,9 @@ test("POST /api/analyze-video handles video details fetch error gracefully", asy
           JSON.stringify({
             items: [
               {
+                id: "thread_id_1",
                 snippet: {
+                  id: "thread_id_1",
                   topLevelComment: {
                     id: "comment_id_1",
                     snippet: {
