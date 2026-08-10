@@ -38,9 +38,9 @@ function setupDatabase(dbPath: string): Database {
 // Fetch Comments from API
 async function collectComments(videoId: string, maxPages: number, db: Database) {
   let pageToken: string | undefined = undefined;
-  const tokenRes = db
-    .query("SELECT value FROM metadata WHERE key = 'last_page_token'")
-    .get() as any;
+  const tokenRes = db.query("SELECT value FROM metadata WHERE key = 'last_page_token'").get() as {
+    value?: string;
+  } | null;
   if (tokenRes && tokenRes.value) {
     pageToken = tokenRes.value;
     console.log(`Resuming from saved pageToken: ${pageToken}`);
@@ -62,28 +62,35 @@ async function collectComments(videoId: string, maxPages: number, db: Database) 
     const items = data.items || [];
     if (items.length === 0) break;
 
-    const itemPromises = items.map(async (item: any) => {
-      const itemComments: CommentData[] = [];
-      const topLevelComment = item.snippet.topLevelComment;
-      itemComments.push(await processComment(topLevelComment.id, topLevelComment.snippet));
+    const itemPromises = items.map(
+      async (item: {
+        id: string;
+        snippet: { topLevelComment: { id: string; snippet: unknown }; totalReplyCount: number };
+      }) => {
+        const itemComments: CommentData[] = [];
+        const topLevelComment = item.snippet.topLevelComment;
+        itemComments.push(await processComment(topLevelComment.id, topLevelComment.snippet));
 
-      if (item.snippet.totalReplyCount > 0) {
-        let replyPageToken: string | undefined = undefined;
-        let replyCount = 0;
-        while (replyCount < MAX_REPLY_PAGES) {
-          const replyData = await fetchReplies(item.id, API_KEY!, replyPageToken);
-          const replies = replyData.items || [];
-          const processedReplies = await Promise.all(
-            replies.map((reply: any) => processComment(reply.id, reply.snippet)),
-          );
-          itemComments.push(...processedReplies);
-          replyPageToken = replyData.nextPageToken;
-          if (!replyPageToken) break;
-          replyCount++;
+        if (item.snippet.totalReplyCount > 0) {
+          let replyPageToken: string | undefined = undefined;
+          let replyCount = 0;
+          while (replyCount < MAX_REPLY_PAGES) {
+            const replyData = await fetchReplies(item.id, API_KEY!, replyPageToken);
+            const replies = replyData.items || [];
+            const processedReplies = await Promise.all(
+              replies.map((reply: { id: string; snippet: unknown }) =>
+                processComment(reply.id, reply.snippet),
+              ),
+            );
+            itemComments.push(...processedReplies);
+            replyPageToken = replyData.nextPageToken;
+            if (!replyPageToken) break;
+            replyCount++;
+          }
         }
-      }
-      return itemComments;
-    });
+        return itemComments;
+      },
+    );
 
     const resolvedComments = await Promise.all(itemPromises);
     const newComments: CommentData[] = resolvedComments.flat();
@@ -153,35 +160,50 @@ async function exportOutputs(videoId: string, db: Database) {
   if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
     throw new Error("Invalid videoId");
   }
-  const totalCount = (db.query("SELECT COUNT(*) as count FROM comments").get() as any).count;
+  const totalCount = (db.query("SELECT COUNT(*) as count FROM comments").get() as { count: number })
+    .count;
   if (totalCount === 0) return;
 
   const positive = (
-    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='POSITIVE'").get() as any
+    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='POSITIVE'").get() as {
+      c: number;
+    }
   ).c;
   const negative = (
-    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='NEGATIVE'").get() as any
+    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='NEGATIVE'").get() as {
+      c: number;
+    }
   ).c;
   const neutral = (
-    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='NEUTRAL'").get() as any
+    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='NEUTRAL'").get() as {
+      c: number;
+    }
   ).c;
   const mixed = (
-    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='MIXED'").get() as any
+    db.query("SELECT COUNT(*) as c FROM comments WHERE sentiment_label='MIXED'").get() as {
+      c: number;
+    }
   ).c;
-  const spam = (db.query("SELECT COUNT(*) as c FROM comments WHERE spam_flag=1").get() as any).c;
-  const toxic = (db.query("SELECT COUNT(*) as c FROM comments WHERE toxic_flag=1").get() as any).c;
-  const buzzer = (db.query("SELECT COUNT(*) as c FROM comments WHERE is_buzzer=1").get() as any).c;
+  const spam = (
+    db.query("SELECT COUNT(*) as c FROM comments WHERE spam_flag=1").get() as { c: number }
+  ).c;
+  const toxic = (
+    db.query("SELECT COUNT(*) as c FROM comments WHERE toxic_flag=1").get() as { c: number }
+  ).c;
+  const buzzer = (
+    db.query("SELECT COUNT(*) as c FROM comments WHERE is_buzzer=1").get() as { c: number }
+  ).c;
 
   const topPositive = db
     .query(
       "SELECT * FROM comments WHERE sentiment_label='POSITIVE' AND spam_flag=0 AND toxic_flag=0 AND is_buzzer=0 ORDER BY like_count DESC LIMIT 5",
     )
-    .all() as any[];
+    .all() as CommentData[];
   const topNegative = db
     .query(
       "SELECT * FROM comments WHERE sentiment_label='NEGATIVE' AND spam_flag=0 AND toxic_flag=0 AND is_buzzer=0 ORDER BY like_count DESC LIMIT 5",
     )
-    .all() as any[];
+    .all() as CommentData[];
 
   const buzzerRings = db
     .query(
@@ -194,7 +216,7 @@ async function exportOutputs(videoId: string, db: Database) {
     LIMIT 5
   `,
     )
-    .all() as any[];
+    .all() as { buzzer_group_id: string; buzz_count: number; raw_text: string }[];
 
   const timeSeries = db
     .query(
@@ -209,7 +231,7 @@ async function exportOutputs(videoId: string, db: Database) {
     ORDER BY date ASC
   `,
     )
-    .all() as any[];
+    .all() as { date: string; pos: number; neg: number }[];
   const xDates = timeSeries.map((r) => `"${r.date}"`).join(", ");
   const posCounts = timeSeries.map((r) => r.pos).join(", ");
   const negCounts = timeSeries.map((r) => r.neg).join(", ");
@@ -228,7 +250,12 @@ async function exportOutputs(videoId: string, db: Database) {
     vUrl.searchParams.append("key", API_KEY!);
     const vRes = await fetch(vUrl.toString());
     if (vRes.ok) {
-      const vData = (await vRes.json()) as any;
+      const vData = (await vRes.json()) as {
+        items?: {
+          snippet: { title: string; channelTitle: string };
+          statistics: { viewCount?: string; likeCount?: string; commentCount?: string };
+        }[];
+      };
       if (vData.items && vData.items.length > 0) {
         const vInfo = vData.items[0];
         videoTitle = vInfo.snippet.title;
@@ -281,7 +308,7 @@ async function exportOutputs(videoId: string, db: Database) {
 
   writeFileSync(mdPath, markdownLines.join("\n"), "utf-8");
 
-  const allRows = db.query("SELECT * FROM comments").all() as any[];
+  const allRows = db.query("SELECT * FROM comments").all() as CommentData[];
   const csvLines = [
     "comment_id,author,sentiment_label,is_spam,is_toxic,is_buzzer,buzzer_group_id,raw_text",
   ];
@@ -296,7 +323,7 @@ async function exportOutputs(videoId: string, db: Database) {
 
   const cleanRows = db
     .query("SELECT * FROM comments WHERE spam_flag=0 AND toxic_flag=0 AND is_buzzer=0")
-    .all() as any[];
+    .all() as CommentData[];
   const cleanCsvLines = ["comment_id,author,sentiment_label,raw_text"];
   for (const r of cleanRows) {
     const escapedText = sanitizeCsvField(r.raw_text);
@@ -344,8 +371,8 @@ async function run() {
 
   try {
     await collectComments(VIDEO_ID, MAX_PAGES, db);
-  } catch (err: any) {
-    console.error(`\nExecution stopped: ${err.message}`);
+  } catch (err: unknown) {
+    console.error(`\nExecution stopped: ${err instanceof Error ? err.message : String(err)}`);
     console.error(`Data is safely stored in ${dbPath}. Run again to resume.`);
   }
 
@@ -356,8 +383,10 @@ async function run() {
       unlinkSync(dbPath);
       console.log(`Cleaned up temporary database: ${dbPath}`);
     }
-  } catch (err: any) {
-    console.error(`Error during report generation: ${err.message}`);
+  } catch (err: unknown) {
+    console.error(
+      `Error during report generation: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 }
 
