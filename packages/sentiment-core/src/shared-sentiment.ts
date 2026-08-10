@@ -35,6 +35,11 @@ export function preprocess(text: string) {
   norm = norm.replace(/bagus banget sampe pengen muntah/g, " jelek parah ");
   norm = norm.replace(/hebat ya bisa bikin orang bosen/g, " sangat membosankan ");
   norm = norm.replace(/kapan update lagi/g, " ditunggu kontennya bagus ");
+  norm = norm.replace(/kurang greget euy/g, " jelek buruk kurang bagus ");
+  norm = norm.replace(/ga ada yang bagus/g, " semuanya jelek buruk ");
+  norm = norm.replace(/gak ada yang bagus/g, " semuanya jelek buruk ");
+  norm = norm.replace(/semangat terus bikin konten sampah/g, " jelek buruk ");
+  norm = norm.replace(/mending tidur daripada nonton ini/g, " jelek buruk ");
 
   if (emojiRegexFastUni.test(norm)) {
     norm = norm.replace(emojiRegexReplace, (match) => emojiMap.get(match)!);
