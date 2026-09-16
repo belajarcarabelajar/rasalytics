@@ -113,7 +113,10 @@ export default {
             for (const key of issue.path) {
               receivedValue = receivedValue?.[key];
             }
-            console.error(`Validation failed at field path "${pathStr}": received ${receivedValue}. Error: ${issue.message}`);
+            const safeValue = JSON.stringify(receivedValue)
+              ?.replace(/[\r\n]+/g, " ")
+              .substring(0, 1000) || "undefined";
+            console.error(`Validation failed at field path "${pathStr}": received ${safeValue}. Error: ${issue.message}`);
           }
 
           const errorMessage = parsedBody.error.issues.map((e) => e.message).join(", ");
