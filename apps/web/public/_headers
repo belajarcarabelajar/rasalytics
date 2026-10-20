@@ -1,2 +1,2 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' http://127.0.0.1:8787 https://rasalytics-api.belajarcarabelajar.workers.dev https://*.rasalytics.pages.dev; frame-ancestors 'none';
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' http://127.0.0.1:8787 https://rasalytics-api.belajarcarabelajar.workers.dev https://*.rasalytics.pages.dev https://cloudflareinsights.com; frame-ancestors 'none';
