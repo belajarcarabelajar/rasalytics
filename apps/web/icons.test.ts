@@ -59,3 +59,17 @@ describe("Google-eligible favicon and logo", () => {
     expect(Math.min(w, h)).toBeGreaterThanOrEqual(112);
   });
 });
+
+describe("social preview image", () => {
+  // og:image and twitter:image must point at a real file: a missing one falls through to the SPA and serves HTML (audit 2026-11-01).
+  test("og:image and twitter:image are a 1200x630 PNG in public/", async () => {
+    const html = await indexHtml();
+    const urls = [...html.matchAll(/<meta\s+(?:property|name)="(?:og|twitter):image"\s+content="([^"]+)"/gi)].map((m) => m[1]);
+    expect(urls.length).toBe(2);
+    for (const url of urls) {
+      const { host, pathname } = new URL(url);
+      expect(host).toBe("rasalytics.belajarcarabelajar.com");
+      expect(await pngSize(pathname.slice(1))).toEqual([1200, 630]);
+    }
+  });
+});
