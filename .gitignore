@@ -44,6 +44,10 @@ dirtree-report.md
 # artifacts
 .artifacts/
 
+# raw scraped dumps and CLI reports hold real commenter names, keep them out of git
+*.info.json
+comments_*.md
+
 # wrangler
 .wrangler/
 wrangler.log
