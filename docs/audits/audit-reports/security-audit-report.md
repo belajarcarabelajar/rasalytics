@@ -187,9 +187,9 @@ A comprehensive security audit of the `rasalytics` repository was executed, iden
 - **Description**: The mock data sample includes real YouTube comments with clear usernames, channel URLs, and direct links to user profile avatar images.
 - **Evidence**:
   ```json
-  "author": "@pejuangcinta5103",
-  "author_id": "UCuSf32hPRVUkuZgjGMGpFBg",
-  "author_thumbnail": "https://yt3.ggpht.com/ytc/AIdro_n8XlWsQa6L_SM0UQwilLRJYhJOEh8tKgEGRMFy1rk=s88-c-k-c0x00ffffff-no-rj"
+  "author": "@user_01",
+  "author_id": "UC_REDACTED",
+  "author_thumbnail": "https://yt3.ggpht.com/REDACTED"
   ```
 - **Impact**: Exposure of PII in public source repositories, resulting in privacy violations and compliance failures under GDPR or local privacy rules.
 - **Likelihood**: High

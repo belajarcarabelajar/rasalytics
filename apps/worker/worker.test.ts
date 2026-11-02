@@ -330,3 +330,73 @@ test("POST /api/analyze-video handles fetch replies exception gracefully", async
     fetchSpy.mockRestore();
   }
 });
+
+const RANKING_COMMENTS = [
+  { id: "c_low", text: "bagus sekali videonya", likes: 2, publishedAt: "2026-07-08T10:00:00Z" },
+  { id: "c_high", text: "keren banget penjelasannya", likes: 9, publishedAt: "2026-07-06T10:00:00Z" },
+  { id: "c_mid", text: "mantap terima kasih ilmunya", likes: 5, publishedAt: "2026-07-07T10:00:00Z" },
+];
+
+async function analyzeMockComments(comments: typeof RANKING_COMMENTS) {
+  const fetchSpy = spyOn(globalThis, "fetch").mockImplementation((async (url: any) => {
+    const urlStr = String(url);
+    if (urlStr.includes("youtube/v3/videos")) {
+      return Response.json({
+        items: [
+          {
+            snippet: { title: "Mock Video", channelTitle: "Mock Channel" },
+            statistics: { viewCount: "100", likeCount: "50", commentCount: String(comments.length) },
+          },
+        ],
+      });
+    }
+    if (urlStr.includes("youtube/v3/commentThreads")) {
+      return Response.json({
+        items: comments.map((c) => ({
+          id: `thread_${c.id}`,
+          snippet: {
+            topLevelComment: {
+              id: c.id,
+              snippet: {
+                authorDisplayName: "user_01",
+                textOriginal: c.text,
+                likeCount: c.likes,
+                publishedAt: c.publishedAt,
+              },
+            },
+            totalReplyCount: 0,
+          },
+        })),
+      });
+    }
+    return Response.json({});
+  }) as any);
+
+  const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ videoId: "test_video_id", maxPages: 1 }),
+  });
+
+  try {
+    const response = await worker.fetch(request, { YOUTUBE_API_KEY: "dummy" }, {});
+    expect(response.status).toBe(200);
+    return (await response.json()) as any;
+  } finally {
+    fetchSpy.mockRestore();
+  }
+}
+
+test("POST /api/analyze-video ranks top positive comments by likes, highest first", async () => {
+  const data = await analyzeMockComments(RANKING_COMMENTS);
+  expect(data.topPositive.map((c: any) => c.id)).toEqual(["c_high", "c_mid", "c_low"]);
+});
+
+test("POST /api/analyze-video returns the sentiment time series in date order", async () => {
+  const data = await analyzeMockComments(RANKING_COMMENTS);
+  expect(data.timeSeries).toEqual([
+    { date: "2026-07-06", pos: 1, neg: 0 },
+    { date: "2026-07-07", pos: 1, neg: 0 },
+    { date: "2026-07-08", pos: 1, neg: 0 },
+  ]);
+});

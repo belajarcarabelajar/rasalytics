@@ -1,2 +1,4 @@
 [test]
+# Bun applies the threshold to every file, so mocks and helper scripts must not count.
 coverageThreshold = 0.54
+coveragePathIgnorePatterns = ["tools/scripts/**"]

@@ -68,7 +68,7 @@
     "owasp": "A04:2021-Cryptographic Failures",
     "location": "data/samples/Presiden Prabowo Bertolak ke Lampung dalam Rangka Kunjungan Kerja, 10 Juni 2026 [-2gsJ0uXQqo].info.json:1",
     "description": "The repository includes sample files containing real YouTube usernames, channel IDs, user URLs, avatar thumbnails, and raw comments. Storing actual user identities violates privacy engineering practices.",
-    "evidence": "Presence of comments array in the info.json with values such as 'author': '@pejuangcinta5103' and 'author_id': 'UCuSf32hPRVUkuZgjGMGpFBg'.",
+    "evidence": "Presence of comments array in the info.json with values such as 'author': '@user_01' and 'author_id': 'UC_REDACTED' (real values redacted).",
     "impact": "Accidental exposure of end-user profiles in public source control, resulting in compliance or privacy check failures.",
     "likelihood": "High",
     "remediation": "Redact or mock all usernames, channel IDs, and URLs in data/samples/ and data/fixtures/ before committing them.",

@@ -14,10 +14,7 @@ async function run() {
   const { processComment } = await import("@rasalytics/sentiment-core");
 
   console.log("Loading comments...");
-  const jsonString = readFileSync(
-    "data/samples/Presiden Prabowo Bertolak ke Lampung dalam Rangka Kunjungan Kerja, 10 Juni 2026 [-2gsJ0uXQqo].info.json",
-    "utf-8",
-  );
+  const jsonString = readFileSync("data/samples/synthetic_comments.json", "utf-8");
   const data = JSON.parse(jsonString);
   const comments = data.comments || [];
 
