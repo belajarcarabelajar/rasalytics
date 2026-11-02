@@ -6,8 +6,9 @@ A powerful YouTube comments scraper and hybrid sentiment analyzer specifically t
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Demo / Screenshot**
-> ![Analysis Summary Demo](./demo-summary.jpg)
+**Live demo:** https://rasalytics.belajarcarabelajar.com
+
+![Rasalytics web app, start screen](./docs/images/screenshot.png)
 
 ## Description
 Analyzing YouTube comments manually can be overwhelming, especially for videos with thousands of interactions. This tool automates the extraction and analysis of YouTube comments, providing deep, actionable insights into audience sentiment. It combines a lexicon-based approach and a localized HuggingFace transformer model (Indonesian RoBERTa) to classify comment sentiments. Built-in spam and toxicity filters ensure the resulting data is clean and highly relevant.
