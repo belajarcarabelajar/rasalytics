@@ -72,7 +72,7 @@
     "impact": "Accidental exposure of end-user profiles in public source control, resulting in compliance or privacy check failures.",
     "likelihood": "High",
     "remediation": "Redact or mock all usernames, channel IDs, and URLs in data/samples/ and data/fixtures/ before committing them.",
-    "status": "confirmed"
+    "status": "resolved"
   },
   {
     "id": "SEC-006",
