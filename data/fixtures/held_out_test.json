@@ -152,7 +152,7 @@
   {"text": "https://youtu.be/9PlMfjCdFvc?si=svyPnhjjzXm3syaA", "expected": "SPAM", "category": "real-world", "note": "Link-only comment, self-promotion"},
   {"text": "Kunjungi channel saya untuk konten seru lainnya guys subscribe ya", "expected": "SPAM", "category": "adversarial", "note": "Self-promotion soliciting subscribers"},
   {"text": "Mau dapet duit jutaan per hari? DM aku sekarang cek bio", "expected": "SPAM", "category": "adversarial", "note": "Scam/get-rich-quick solicitation"},
-  {"text": "follow ig aku dong kak @spamaccount buat tips kecantikan", "expected": "SPAM", "category": "adversarial", "note": "Cross-platform follower solicitation"},
+  {"text": "follow ig aku dong kak @user_01 buat tips kecantikan", "expected": "SPAM", "category": "adversarial", "note": "Cross-platform follower solicitation"},
   {"text": "Cek link di bio saya ada giveaway spesial buat kalian", "expected": "SPAM", "category": "adversarial", "note": "Fake giveaway bait"},
   {"text": "sub4sub yuk biar sama-sama grow channelnya https://fake.com", "expected": "SPAM", "category": "adversarial", "note": "Sub-for-sub with link"},
 

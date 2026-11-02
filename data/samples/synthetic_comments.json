@@ -1,0 +1,13 @@
+{
+  "title": "Synthetic sample for tools/scripts/analyze_offline.ts. Names and texts are made up.",
+  "comments": [
+    { "id": "synthetic_01", "author": "user_01", "text": "Videonya bagus, penjelasannya jelas sekali.", "like_count": 12, "timestamp": 1780000000 },
+    { "id": "synthetic_02", "author": "user_02", "text": "Great explanation, thank you for sharing!", "like_count": 8, "timestamp": 1780000600 },
+    { "id": "synthetic_03", "author": "user_03", "text": "Suaranya jelek dan videonya terlalu panjang.", "like_count": 3, "timestamp": 1780001200 },
+    { "id": "synthetic_04", "author": "user_04", "text": "Kapan bagian kedua diunggah?", "like_count": 1, "timestamp": 1780001800 },
+    { "id": "synthetic_05", "author": "user_05", "text": "Materinya bagus tapi audionya buruk.", "like_count": 5, "timestamp": 1780002400 },
+    { "id": "synthetic_06", "author": "user_06", "text": "Cek link di bio untuk promo gratis https://example.com", "like_count": 0, "timestamp": 1780003000 },
+    { "id": "synthetic_07", "author": "user_07", "text": "This was boring and a waste of time.", "like_count": 2, "timestamp": 1780003600 },
+    { "id": "synthetic_08", "author": "user_08", "text": "Saya menonton ini dari Bandung.", "like_count": 0, "timestamp": 1780004200 }
+  ]
+}
