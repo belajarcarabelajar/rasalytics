@@ -183,7 +183,8 @@ A comprehensive security audit of the `rasalytics` repository was executed, iden
 - **Category**: Data Privacy
 - **CWE**: CWE-359: Exposure of Private Personal Information to an Unauthorized Actor
 - **OWASP**: A04:2021-Cryptographic Failures
-- **Location**: `data/samples/Presiden Prabowo Bertolak ke Lampung dalam Rangka Kunjungan Kerja, 10 Juni 2026 [-2gsJ0uXQqo].info.json:1`
+- **Location**: `data/samples/Presiden Prabowo Bertolak ke Lampung dalam Rangka Kunjungan Kerja, 10 Juni 2026 [-2gsJ0uXQqo].info.json:1` (removed in PR #27)
+- **Resolved in PR #27**: the file was removed and replaced with the synthetic sample `data/samples/synthetic_comments.json`.
 - **Description**: The mock data sample includes real YouTube comments with clear usernames, channel URLs, and direct links to user profile avatar images.
 - **Evidence**:
   ```json

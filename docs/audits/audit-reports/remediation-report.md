@@ -8,7 +8,7 @@
 | **SEC-002** | Medium | `apps/worker/worker.ts` | fixed |
 | **SEC-003** | Medium | `apps/web/public/index.html`, `apps/web/public/_headers` | fixed |
 | **SEC-004** | Medium | `apps/web/public/index.html`, `apps/web/public/chart.umd.js`, `apps/web/public/wordcloud2.min.js` | fixed |
-| **SEC-005** | Medium | `data/samples/comments_5bKxkW_z408.md`, `data/samples/Presiden Prabowo Bertolak ke Lampung...info.json` | fixed |
+| **SEC-005** | Medium | `data/samples/comments_5bKxkW_z408.md`, `data/samples/Presiden Prabowo Bertolak ke Lampung...info.json` | fixed; files removed in PR #27 (synthetic sample) |
 | **SEC-006** | Medium | `.agents/skills/rasalytics/SKILL.md`, `.agents/skills/rasalytics-sentiment/SKILL.md`, `.gemini/config/skills/youtube-comments-scraper/SKILL.md`, `.gemini/config/skills/youtube-sentiment-analysis/SKILL.md`, `.agents/skills/rasalytics/agents/openai.yaml`, `.agents/skills/rasalytics-sentiment/agents/openai.yaml`, `.agents/skills/rasalytics-sentiment/references/pipeline.md`, `.gemini/config/skills/youtube-sentiment-analysis/references/pipeline.md` | fixed |
 | **SEC-007** | Medium | `.github/workflows/compliance.yml`, `.github/workflows/test.yml` | fixed |
 | **SEC-008** | Low | `.github/workflows/compliance.yml`, `.github/workflows/test.yml` | fixed |
@@ -38,8 +38,9 @@
 - **Description**: Fully resolved CDN supply-chain dependencies by downloading and self-hosting both libraries locally inside `apps/web/public/`. Both scripts are loaded locally and verified with exact cryptographically computed SHA-384 integrity hashes.
 
 ### SEC-005 — Exposure of PII in Data Samples
-- **Files Changed**: [comments_5bKxkW_z408.md](file:///home/belajarcarabelajar/rasalytics/data/samples/comments_5bKxkW_z408.md) and [Presiden Prabowo Bertolak ke Lampung...info.json](file:///home/belajarcarabelajar/rasalytics/data/samples/Presiden%20Prabowo%20Bertolak%20ke%20Lampung%20dalam%20Rangka%20Kunjungan%20Kerja,%2010%20Juni%202026%20[-2gsJ0uXQqo].info.json)
+- **Files Changed**: `data/samples/comments_5bKxkW_z408.md` and `data/samples/Presiden Prabowo Bertolak ke Lampung...info.json`
 - **Description**: Redacted all real YouTube usernames, channel IDs, user URLs, and profile avatars, replacing them with mock placeholders (`@user_0NN`, `UC0000000000000000000000`, `https://example.com/avatar.jpg`) while preserving comment texts for sentiment benchmarks.
+- **Status update**: Resolved in PR #27. Both sample files were removed from the repository and replaced with the synthetic sample `data/samples/synthetic_comments.json`.
 
 ### SEC-006 — Prompt Injection Vulnerability in AI-Agent Skills
 - **Files Changed**: `.agents/skills/rasalytics/SKILL.md`, `.agents/skills/rasalytics-sentiment/SKILL.md`, `.gemini/config/skills/youtube-comments-scraper/SKILL.md`, `.gemini/config/skills/youtube-sentiment-analysis/SKILL.md`, `.agents/skills/rasalytics/agents/openai.yaml`, `.agents/skills/rasalytics-sentiment/agents/openai.yaml`, `.agents/skills/rasalytics-sentiment/references/pipeline.md`, `.gemini/config/skills/youtube-sentiment-analysis/references/pipeline.md`

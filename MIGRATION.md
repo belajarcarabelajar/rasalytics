@@ -54,3 +54,5 @@ This document provides a mapping of all source files and directories to their ne
 | `dirtree-report.md` | `.artifacts/dirtree-report.md` | Previous directory tree report |
 | `TECHNICAL_DEBT_AUDIT.md` | `docs/audits/TECHNICAL_DEBT_AUDIT.md` | Tech debt review report |
 | `audit-reports/` | `docs/audits/audit-reports/` | Historical benchmark metrics reviews |
+
+> **Later change (PR #27):** `data/samples/comments_5bKxkW_z408.md` and the `Presiden Prabowo Bertolak ... .info.json` sample held real commenter data and were removed; `data/samples/synthetic_comments.json` replaces them. The generated `.artifacts/` files listed above are no longer committed. The `data/fixtures/comments_5bKxkW_z408*.csv` files are not tracked in the repository.
