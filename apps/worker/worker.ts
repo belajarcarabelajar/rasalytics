@@ -8,7 +8,10 @@ interface Env {
 }
 
 const AnalyzeVideoSchema = z.object({
-  videoId: z.string().min(1, "Missing videoId"),
+  videoId: z
+    .string()
+    .min(1, "Missing videoId")
+    .regex(/^[a-zA-Z0-9_-]{11}$/, "Invalid videoId"),
   maxPages: z.number().int().min(1).max(10, { message: "maxPages must be 10 or fewer" }).optional().default(1),
 });
 
@@ -201,6 +204,15 @@ export default {
         let allComments: CommentData[] = [];
         let pageToken = "";
         let pageCount = 0;
+        // Set when an upstream error cut the result short; the first reason is kept
+        let partial = false;
+        let partialReason = "";
+        const markPartial = (reason: string) => {
+          if (!partial) {
+            partial = true;
+            partialReason = reason;
+          }
+        };
 
         while (pageCount < maxPages) {
           const ytUrl = new URL("https://www.googleapis.com/youtube/v3/commentThreads");
@@ -225,6 +237,7 @@ export default {
                 headers: { "Content-Type": "application/json", ...corsHeaders },
               });
             }
+            markPartial("comment page request failed");
             break; // Stop paginating on error
           }
 
@@ -232,6 +245,7 @@ export default {
           const parsedData = YouTubeCommentThreadSchema.safeParse(rawData);
           if (!parsedData.success) {
             console.error("Failed to parse comment threads:", parsedData.error.message);
+            markPartial("comment page parse failed");
             break;
           }
 
@@ -304,12 +318,15 @@ export default {
                       if (!rPageToken) break;
                     } else {
                       console.error("Failed to parse replies:", parsedRData.error.message);
+                      markPartial("reply parse failed");
                       break;
                     }
                   } else {
+                    markPartial("reply request failed");
                     break;
                   }
                 } catch (e) {
+                  markPartial("reply request failed");
                   break;
                 }
                 rPageCount++;
@@ -426,12 +443,14 @@ export default {
           .map(([date, data]) => ({ date, pos: data.pos, neg: data.neg }))
           .sort((a, b) => a.date.localeCompare(b.date));
 
-        const total = positive + negative + neutral + mixed;
+        const total = processedComments.length;
 
         return new Response(
           JSON.stringify({
             videoDetails,
             hasMore: subrequestCount >= MAX_SUBREQUESTS,
+            partial,
+            partialReason,
             total,
             positive,
             negative,

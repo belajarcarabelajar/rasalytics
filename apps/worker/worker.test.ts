@@ -28,7 +28,7 @@ test("POST /api/analyze-video logs validation errors without log injection", asy
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ videoId: "valid_id", maxPages: "100\n\r injection" }),
+    body: JSON.stringify({ videoId: "dQw4w9WgXcQ",maxPages: "100\n\r injection" }),
   });
 
   const env = { YOUTUBE_API_KEY: "dummy" };
@@ -83,7 +83,7 @@ test("POST /api/analyze-video handles video details fetch error gracefully", asy
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ videoId: "test_video_id_error", maxPages: 1 }),
+    body: JSON.stringify({ videoId: "dQw4w9WgXcQ", maxPages: 1 }),
   });
 
   const env = { YOUTUBE_API_KEY: "dummy" };
@@ -152,7 +152,7 @@ test("POST /api/analyze-video with maxPages exactly the boundary (10) passes val
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ videoId: "test_video_id", maxPages: 10 }),
+    body: JSON.stringify({ videoId: "dQw4w9WgXcQ", maxPages: 10 }),
   });
 
   const env = { YOUTUBE_API_KEY: "dummy" };
@@ -217,7 +217,7 @@ test("POST /api/analyze-video with maxPages one below the boundary (9) passes va
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ videoId: "test_video_id", maxPages: 9 }),
+    body: JSON.stringify({ videoId: "dQw4w9WgXcQ", maxPages: 9 }),
   });
 
   const env = { YOUTUBE_API_KEY: "dummy" };
@@ -240,7 +240,7 @@ test("POST /api/analyze-video with maxPages one above the boundary (11) fails va
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ videoId: "test_video_id", maxPages: 11 }),
+    body: JSON.stringify({ videoId: "dQw4w9WgXcQ", maxPages: 11 }),
   });
 
   const env = { YOUTUBE_API_KEY: "dummy" };
@@ -311,7 +311,7 @@ test("POST /api/analyze-video handles fetch replies exception gracefully", async
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ videoId: "test_video_id", maxPages: 1 }),
+    body: JSON.stringify({ videoId: "dQw4w9WgXcQ", maxPages: 1 }),
   });
 
   const env = { YOUTUBE_API_KEY: "dummy" };
@@ -375,7 +375,7 @@ async function analyzeMockComments(comments: typeof RANKING_COMMENTS) {
   const request = new Request("https://rasalytics.pages.dev/api/analyze-video", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ videoId: "test_video_id", maxPages: 1 }),
+    body: JSON.stringify({ videoId: "dQw4w9WgXcQ", maxPages: 1 }),
   });
 
   try {

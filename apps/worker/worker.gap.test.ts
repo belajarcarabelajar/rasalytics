@@ -5,6 +5,7 @@ import { preprocess } from "../../packages/sentiment-core/src/shared-sentiment.j
 
 const BASE = "https://rasalytics.pages.dev";
 const ENV = { YOUTUBE_API_KEY: "dummy" };
+const VID = "dQw4w9WgXcQ";
 
 type Route = (url: URL) => Response | Promise<Response>;
 
@@ -119,7 +120,7 @@ test("Unknown routes and wrong methods return 404 Not Found", async () => {
 test("POST /api/analyze-video without YOUTUBE_API_KEY returns 500 and makes no fetch", async () => {
   const { spy, calls } = mockFetch(() => Response.json({}));
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid" }), {}, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID }), {}, {});
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ error: "YOUTUBE_API_KEY not configured on server" });
     expect(calls).toHaveLength(0);
@@ -152,7 +153,7 @@ test("POST /api/analyze-video propagates the status when the first comment page 
     return new Response("quota exceeded", { status: 403 });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid" }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID }), ENV, {});
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({ error: "Failed to fetch comment threads" });
     expect(
@@ -172,7 +173,7 @@ test("POST /api/analyze-video returns 404 when the video has no comments", async
     return Response.json({ items: [] });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid" }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID }), ENV, {});
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: "No comments found or comments disabled" });
   } finally {
@@ -187,7 +188,7 @@ test("POST /api/analyze-video treats an unparseable comment thread page as no co
     return Response.json({ items: [{ id: 123 }] });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid" }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID }), ENV, {});
     expect(response.status).toBe(404);
     expect(loggedWith(consoleSpy, "Failed to parse comment threads:")).toBe(true);
   } finally {
@@ -205,7 +206,7 @@ test("POST /api/analyze-video keeps Unknown video details when the details paylo
     return Response.json({ items: [threadItem("t1", ytComment("c1", "bagus sekali videonya"))] });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid" }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     expect(data.videoDetails).toEqual({
@@ -232,7 +233,7 @@ test("POST /api/analyze-video fetches only one page by default even when nextPag
     });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid" }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     expect(callsTo("/youtube/v3/commentThreads")).toHaveLength(1);
@@ -254,7 +255,7 @@ test("POST /api/analyze-video follows nextPageToken up to maxPages pages", async
     });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid", maxPages: 2 }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID, maxPages: 2 }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     const threadCalls = callsTo("/youtube/v3/commentThreads");
@@ -279,7 +280,7 @@ test("POST /api/analyze-video stops paginating on a later page error and keeps e
     });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid", maxPages: 3 }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID, maxPages: 3 }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     expect(callsTo("/youtube/v3/commentThreads")).toHaveLength(2);
@@ -314,7 +315,7 @@ test("POST /api/analyze-video collects inline replies with textDisplay and like 
     });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid" }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     expect(data.videoDetails).toEqual({
@@ -356,7 +357,7 @@ test("POST /api/analyze-video pages through extra replies and skips inline dupli
     });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid", maxPages: 2 }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID, maxPages: 2 }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     expect(data.allComments.map((c: any) => c.id)).toEqual(["c_top", "r1", "r2", "r3"]);
@@ -381,7 +382,7 @@ test("POST /api/analyze-video ignores an unparseable replies payload but keeps t
     });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid", maxPages: 3 }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID, maxPages: 3 }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     expect(data.allComments.map((c: any) => c.id)).toEqual(["c_top"]);
@@ -402,7 +403,7 @@ test("POST /api/analyze-video stops fetching replies after a non-OK replies resp
     });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid", maxPages: 3 }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID, maxPages: 3 }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     expect(data.allComments.map((c: any) => c.id)).toEqual(["c_top"]);
@@ -430,7 +431,7 @@ test("POST /api/analyze-video trips the 45-subrequest circuit breaker and report
     });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid", maxPages: 10 }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID, maxPages: 10 }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     // 1 video + 3 thread pages + 41 reply pages = 45 subrequests
@@ -464,7 +465,7 @@ test("POST /api/analyze-video groups identical comments into a buzzer ring keyed
     });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid" }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     expect(data.buzzer).toBe(2);
@@ -498,7 +499,7 @@ test("POST /api/analyze-video flags a near-duplicate (similarity between 0.75 an
     });
   });
   try {
-    const response = await worker.fetch(analyzeRequest({ videoId: "vid" }), ENV, {});
+    const response = await worker.fetch(analyzeRequest({ videoId: VID }), ENV, {});
     expect(response.status).toBe(200);
     const data = (await response.json()) as any;
     expect(data.buzzer).toBe(1);
