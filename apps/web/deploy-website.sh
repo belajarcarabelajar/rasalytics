@@ -36,7 +36,7 @@ fi
 echo "Environment validation passed."
 
 echo "Installing dependencies..."
-bun install
+bun install --frozen-lockfile
 
 echo "Deploying Cloudflare Worker (Backend API)..."
 ENV_FILE="$ROOT_DIR/.env"
@@ -55,6 +55,6 @@ fi
 $WRANGLER deploy "$WORKER_DIR/worker.ts" --config "$WORKER_DIR/wrangler.toml" --name rasalytics-api
 
 echo "Deploying Cloudflare Pages (Frontend)..."
-bunx wrangler@3 pages deploy "$WEB_DIR/public" --project-name rasalytics-web --branch master --commit-dirty=true
+$WRANGLER pages deploy "$WEB_DIR/public" --project-name rasalytics-web --branch master --commit-dirty=true
 
 echo "Deployment complete!"

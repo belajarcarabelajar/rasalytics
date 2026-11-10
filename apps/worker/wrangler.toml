@@ -7,9 +7,5 @@ compatibility_date = "2026-06-24"
 [vars]
 ENVIRONMENT = "production"
 
-
-
-logpush = true
-
 [observability]
 enabled = true
