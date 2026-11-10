@@ -22,11 +22,14 @@ function analyzeWithLexicon(text: string, lexicon: Record<string, number>) {
 export function preprocess(text: string) {
   let norm = text.toLowerCase();
 
+  // The lookbehind gives each token one start position, which keeps matching linear.
   const urls =
-    norm.match(/https?:\/\/[^\s]+/g) || norm.match(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g) || [];
+    norm.match(/https?:\/\/[^\s]+/g) ||
+    norm.match(/(?<![a-z0-9])[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g) ||
+    [];
 
   norm = norm.replace(/https?:\/\/[^\s]+/g, " ");
-  norm = norm.replace(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g, " ");
+  norm = norm.replace(/(?<![a-z0-9])[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g, " ");
   norm = norm.replace(/@[^\s]+/g, " ");
   norm = norm.replace(/#[^\s]+/g, " ");
 

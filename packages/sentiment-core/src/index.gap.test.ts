@@ -36,6 +36,24 @@ test("analyzeComment gives TOXIC precedence over SPAM but still reports the spam
   });
 });
 
+test("analyzeComment scans a 50000 character token without a dot in linear time", async () => {
+  // The toxic word settles the label before the classifier is consulted.
+  const input = "a".repeat(50000) + " anjing";
+  const started = performance.now();
+  const result = await analyzeComment(input);
+  const elapsed = performance.now() - started;
+
+  expect(result.label).toBe("TOXIC");
+  expect(result.isSpam).toBe(false);
+  expect(elapsed).toBeLessThan(1000);
+});
+
+test("analyzeComment still flags a bare domain that follows a non-alphanumeric character as spam", async () => {
+  const result = await analyzeComment("cek foo-bar.com/x anjing");
+  expect(result.label).toBe("TOXIC");
+  expect(result.isSpam).toBe(true);
+});
+
 test("processComment falls back to textDisplay and default fields when snippet values are missing", async () => {
   const comment = await processComment("gap_id", { textDisplay: "@budi\n#viral" });
   expect(comment.comment_id).toBe("gap_id");
@@ -57,10 +75,10 @@ test("fetchWithRetry throws a dedicated error when comments are disabled (403) w
   let calls = 0;
   const fetchSpy = spyOn(globalThis as any, "fetch").mockImplementation(async () => {
     calls++;
-    return new Response(
-      JSON.stringify({ error: { errors: [{ reason: "commentsDisabled" }] } }),
-      { status: 403, headers: { "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: { errors: [{ reason: "commentsDisabled" }] } }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
   });
 
   try {
@@ -225,7 +243,9 @@ test("generateMarkdownReport raises warnings when spam, toxicity and buzzer rati
 
   expect(report).toContain("**Warning:** High spam activity detected.");
   expect(report).toContain("**Warning:** High toxicity levels detected.");
-  expect(report).toContain("**Alert:** Significant organized Buzzer/Astroturfing activity detected.");
+  expect(report).toContain(
+    "**Alert:** Significant organized Buzzer/Astroturfing activity detected.",
+  );
   expect(report).not.toContain("Spam levels are normal.");
   expect(report).not.toContain("Community toxicity is low.");
   expect(report).not.toContain("Inorganic buzzer manipulation is low.");
@@ -249,6 +269,37 @@ test("generateMarkdownReport names the strict majority: Positive when positive l
   const negativeLeads = generateMarkdownReport(makeReportData({ positive: 30, negative: 40 }));
   expect(negativeLeads).toContain("The video received predominantly Negative feedback.");
   expect(negativeLeads).not.toContain("The video received predominantly Positive feedback.");
+});
+
+test("generateMarkdownReport escapes HTML and Markdown in author, comment text, title and channel", () => {
+  const hostile = {
+    author: "<img src=x>",
+    like_count: 1,
+    raw_text: "[klik](http://x)",
+    confidence_score: 90,
+  };
+  const lines = generateMarkdownReport(
+    makeReportData({
+      videoTitle: "<script>alert(1)</script>",
+      channelName: "[kanal](http://y)",
+      topPositive: [hostile],
+      topNegative: [hostile],
+    }),
+  );
+  const report = lines.join("\n");
+
+  // The escaped form still contains the raw substring, so only an unescaped match counts.
+  expect(report).not.toMatch(/(?<!\\)</);
+  expect(report).not.toMatch(/(?<!\\)>/);
+  expect(report).not.toMatch(/(?<!\\)\[klik/);
+  expect(report).not.toMatch(/(?<!\\)\[kanal/);
+  expect(lines).toContain("- **Title:** \\<script\\>alert(1)\\</script\\>");
+  expect(lines).toContain("- **Channel:** \\[kanal\\](http://y)");
+  expect(
+    lines.filter(
+      (l) => l === '- **\\<img src=x\\>** (1 likes): "\\[klik\\](http://x)" (Confidence: 90%)',
+    ).length,
+  ).toBe(2);
 });
 
 test("generateMarkdownReport joins multiple buzzer rings and escapes markdown in templates", () => {
