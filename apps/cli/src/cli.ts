@@ -55,6 +55,25 @@ async function collectComments(videoId: string, maxPages: number, db: Database) 
   `);
 
   const recentShingles: { id: string; shingles: Set<string>; groupId: string }[] = [];
+  if (pageToken) {
+    // A resumed run must still see the comments stored by the earlier run,
+    // otherwise duplicates across the two runs are never flagged.
+    const stored = db
+      .query(
+        "SELECT comment_id, normalized_text, buzzer_group_id FROM comments WHERE spam_flag=0 ORDER BY rowid DESC LIMIT 1000",
+      )
+      .all() as { comment_id: string; normalized_text: string; buzzer_group_id: string }[];
+    for (const row of stored.reverse()) {
+      const shingles = getShingles(row.normalized_text || "");
+      if (shingles.size > 0) {
+        recentShingles.push({
+          id: row.comment_id,
+          shingles,
+          groupId: row.buzzer_group_id || "",
+        });
+      }
+    }
+  }
   let pageCount = 0;
 
   while (pageCount < maxPages) {
@@ -226,7 +245,7 @@ async function exportOutputs(videoId: string, db: Database) {
       SUM(CASE WHEN sentiment_label='POSITIVE' THEN 1 ELSE 0 END) as pos,
       SUM(CASE WHEN sentiment_label='NEGATIVE' THEN 1 ELSE 0 END) as neg
     FROM comments
-    WHERE published_at IS NOT NULL
+    WHERE published_at IS NOT NULL AND published_at != ''
     GROUP BY date
     ORDER BY date ASC
   `,
@@ -266,7 +285,9 @@ async function exportOutputs(videoId: string, db: Database) {
       }
     }
   } catch (e) {
-    console.error("Failed to fetch video details:", e);
+    // The request URL carries the API key and a network error can quote it.
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("Failed to fetch video details:", message.replace(/key=[^&\s]+/g, "key=***"));
   }
 
   const markdownLines = generateMarkdownReport({
@@ -300,7 +321,7 @@ async function exportOutputs(videoId: string, db: Database) {
 
   function sanitizeCsvField(text: string): string {
     let escaped = (text || "").replace(/"/g, '""');
-    if (/^[=\+\-@]/.test(escaped)) {
+    if (/^[=+\-@\t\r]/.test(escaped)) {
       escaped = "'" + escaped;
     }
     return escaped;
@@ -363,15 +384,21 @@ async function run() {
     process.exit(1);
   }
 
-  const MAX_PAGES = parseInt(values.maxPages as string, 10);
+  const MAX_PAGES = /^\d+$/.test(values.maxPages as string) ? Number(values.maxPages) : NaN;
+  if (!Number.isInteger(MAX_PAGES) || MAX_PAGES <= 0) {
+    console.error("Error: --maxPages must be a positive integer.");
+    process.exit(1);
+  }
   console.log(`Starting comment collection for Video ID: ${VIDEO_ID}...`);
 
   const dbPath = `./temp_${VIDEO_ID}.sqlite`;
   const db = setupDatabase(dbPath);
 
+  let failed = false;
   try {
     await collectComments(VIDEO_ID, MAX_PAGES, db);
   } catch (err: unknown) {
+    failed = true;
     console.error(`\nExecution stopped: ${err instanceof Error ? err.message : String(err)}`);
     console.error(`Data is safely stored in ${dbPath}. Run again to resume.`);
   }
@@ -379,7 +406,10 @@ async function run() {
   try {
     await exportOutputs(VIDEO_ID, db);
     db.close();
-    if (existsSync(dbPath)) {
+    if (failed) {
+      // Keep the database so the next run can resume from the saved page token.
+      process.exitCode = 1;
+    } else if (existsSync(dbPath)) {
       unlinkSync(dbPath);
       console.log(`Cleaned up temporary database: ${dbPath}`);
     }
