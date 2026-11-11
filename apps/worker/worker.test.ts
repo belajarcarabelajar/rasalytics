@@ -28,7 +28,7 @@ test("POST /api/analyze-video logs validation errors without log injection", asy
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ videoId: "dQw4w9WgXcQ",maxPages: "100\n\r injection" }),
+    body: JSON.stringify({ videoId: "dQw4w9WgXcQ", maxPages: "100\n\r injection" }),
   });
 
   const env = { YOUTUBE_API_KEY: "dummy" };
