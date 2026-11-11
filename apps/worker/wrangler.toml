@@ -2,6 +2,11 @@ name = "rasalytics-api"
 main = "worker.ts"
 compatibility_date = "2026-06-24"
 
+# The Cache API only works on a custom domain, not on workers.dev.
+routes = [{ pattern = "api-rasalytics.belajarcarabelajar.com", custom_domain = true }]
+# Wrangler turns workers.dev off once routes exist; old clients still call it.
+workers_dev = true
+
 # The Worker environment variables.
 # For production secrets, use `wrangler secret put <NAME>` instead.
 [vars]
@@ -15,7 +20,8 @@ enabled = true
 # RATE_LIMIT_PERIOD_SECONDS in worker.ts (sent as Retry-After).
 [[ratelimits]]
 name = "ANALYZE_RATE_LIMITER"
-namespace_id = "1001"
+# Must be unique in the Cloudflare account; 71001 and 71002 belong to time-capsule.
+namespace_id = "81001"
 
   [ratelimits.simple]
   limit = 10
