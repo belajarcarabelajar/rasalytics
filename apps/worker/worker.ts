@@ -5,6 +5,22 @@ import { z } from "zod";
 
 interface Env {
   YOUTUBE_API_KEY?: string;
+  ANALYZE_RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
+}
+
+// Must match [ratelimits.simple].period in wrangler.toml; limit() does not report it
+const RATE_LIMIT_PERIOD_SECONDS = 60;
+const ANALYZE_CACHE_TTL_SECONDS = 3600;
+
+// The Cache API only accepts GET keys, so the POST body is mapped onto a synthetic URL
+function analyzeCacheKey(videoId: string, maxPages: number): Request {
+  const key = `https://rasalytics-api.cache/analyze-video/${videoId}?maxPages=${maxPages}`;
+  return new Request(key, { method: "GET" });
+}
+
+// Absent under `bun test` and in Workers previews; caching is then skipped
+function analyzeCache(): Cache | undefined {
+  return (globalThis as { caches?: { default?: Cache } }).caches?.default;
 }
 
 const AnalyzeVideoSchema = z.object({
@@ -104,6 +120,21 @@ export default {
     }
 
     if (url.pathname === "/api/analyze-video" && request.method === "POST") {
+      if (env.ANALYZE_RATE_LIMITER) {
+        const clientIp = request.headers.get("CF-Connecting-IP") || "unknown";
+        const { success } = await env.ANALYZE_RATE_LIMITER.limit({ key: clientIp });
+        if (!success) {
+          return new Response(JSON.stringify({ error: "Too many requests" }), {
+            status: 429,
+            headers: {
+              "Content-Type": "application/json",
+              "Retry-After": String(RATE_LIMIT_PERIOD_SECONDS),
+              ...corsHeaders,
+            },
+          });
+        }
+      }
+
       try {
         const jsonBody = await request.json();
         const parsedBody = AnalyzeVideoSchema.safeParse(jsonBody);
@@ -149,6 +180,15 @@ export default {
         const maxPages = body.maxPages;
         const apiKey = env.YOUTUBE_API_KEY;
         const videoId = body.videoId;
+
+        const cache = analyzeCache();
+        const cacheKey = analyzeCacheKey(videoId, maxPages);
+        const cached = await cache?.match(cacheKey);
+        if (cached) {
+          return new Response(await cached.text(), {
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          });
+        }
 
         let subrequestCount = 0;
         const MAX_SUBREQUESTS = 45;
@@ -445,30 +485,46 @@ export default {
 
         const total = processedComments.length;
 
-        return new Response(
-          JSON.stringify({
-            videoDetails,
-            hasMore: subrequestCount >= MAX_SUBREQUESTS,
-            partial,
-            partialReason,
-            total,
-            positive,
-            negative,
-            neutral,
-            mixed,
-            spam,
-            toxic,
-            buzzer,
-            topPositive,
-            topNegative,
-            buzzerRings,
-            timeSeries,
-            allComments: processedComments, // returned for export capabilities
-          }),
-          {
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
-        );
+        const resultJson = JSON.stringify({
+          videoDetails,
+          hasMore: subrequestCount >= MAX_SUBREQUESTS,
+          partial,
+          partialReason,
+          total,
+          positive,
+          negative,
+          neutral,
+          mixed,
+          spam,
+          toxic,
+          buzzer,
+          topPositive,
+          topNegative,
+          buzzerRings,
+          timeSeries,
+          allComments: processedComments, // returned for export capabilities
+        });
+
+        // A partial result would pin an upstream hiccup for the whole TTL, so only complete ones are kept
+        if (cache && !partial) {
+          try {
+            await cache.put(
+              cacheKey,
+              new Response(resultJson, {
+                headers: {
+                  "Content-Type": "application/json",
+                  "Cache-Control": `public, max-age=${ANALYZE_CACHE_TTL_SECONDS}`,
+                },
+              }),
+            );
+          } catch (e: any) {
+            console.error("Failed to cache analyze result:", e?.message || e);
+          }
+        }
+
+        return new Response(resultJson, {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
       } catch (err: any) {
         console.error("Worker error handling /api/analyze-video:", err);
         return new Response(JSON.stringify({ error: "Internal error" }), {

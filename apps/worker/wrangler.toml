@@ -9,3 +9,14 @@ ENVIRONMENT = "production"
 
 [observability]
 enabled = true
+
+# Per-client-IP limit for POST /api/analyze-video. Counts are kept per Cloudflare
+# location, not globally. period must be 10 or 60 and must match
+# RATE_LIMIT_PERIOD_SECONDS in worker.ts (sent as Retry-After).
+[[ratelimits]]
+name = "ANALYZE_RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60
