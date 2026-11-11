@@ -93,6 +93,10 @@ test("escapeMarkdown sanitizes pipe characters, markdown chars and newlines", ()
   expect(safe).toBe("Hello \\| \\`World\\` \\*New\\* \\_Line\\_ \\[Link\\] New Line");
 });
 
+test("escapeMarkdown escapes angle brackets so raw HTML cannot render", () => {
+  expect(escapeMarkdown("<img src=x> a > b")).toBe("\\<img src=x\\> a \\> b");
+});
+
 import { fetchCommentThreads, fetchReplies, generateMarkdownReport } from "./index";
 
 test("fetchCommentThreads constructs correct URL and calls fetchWithRetry", async () => {

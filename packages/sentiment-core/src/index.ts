@@ -7,7 +7,7 @@ import { emojiMap, emojiRegexFastUni, emojiRegexReplace } from "./emoji-utils";
 import { Database } from "bun:sqlite";
 import { pipeline, env } from "@xenova/transformers";
 
-let classifier: Function | "failed" | null = null;
+let classifierPromise: Promise<Function | "failed"> | null = null;
 
 env.localModelPath = existsSync("./models")
   ? "./models"
@@ -46,7 +46,7 @@ export interface CommentData {
 
 export function escapeMarkdown(text: string): string {
   return text
-    .replace(/([`*_[\]|])/g, "\\$1")
+    .replace(/([`*_[\]|<>])/g, "\\$1")
     .replace(/\n/g, " ")
     .replace(/\r/g, "");
 }
@@ -56,19 +56,22 @@ export { preprocess, analyzeEdgeSafe };
 import { getShingles, jaccard } from "./forensics.js";
 export { getShingles, jaccard };
 
-export async function getClassifier() {
-  if (!classifier) {
-    try {
-      classifier = await pipeline("sentiment-analysis", "indonesian-roberta", {
-        local_files_only: true,
-        quantized: false,
-      });
-    } catch (err) {
-      console.warn("Failed to load Transformer model, falling back to Lexicon.", err);
-      classifier = "failed";
-    }
+async function loadClassifier(): Promise<Function | "failed"> {
+  try {
+    return await pipeline("sentiment-analysis", "indonesian-roberta", {
+      local_files_only: true,
+      quantized: false,
+    });
+  } catch (err) {
+    console.warn("Failed to load Transformer model, falling back to Lexicon.", err);
+    return "failed";
   }
-  return classifier;
+}
+
+export function getClassifier(): Promise<Function | "failed"> {
+  // Concurrent callers share the in-flight load instead of each starting their own.
+  if (!classifierPromise) classifierPromise = loadClassifier();
+  return classifierPromise;
 }
 
 function splitByConjunction(text: string): string[] {
@@ -93,10 +96,13 @@ export async function analyzeComment(text: string): Promise<{
 }> {
   // Preprocess text without negation joining for the transformer
   let norm = text.toLowerCase();
+  // The lookbehind gives each token one start position, which keeps matching linear.
   const urls =
-    norm.match(/https?:\/\/[^\s]+/g) || norm.match(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g) || [];
+    norm.match(/https?:\/\/[^\s]+/g) ||
+    norm.match(/(?<![a-z0-9])[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g) ||
+    [];
   norm = norm.replace(/https?:\/\/[^\s]+/g, " ");
-  norm = norm.replace(/[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g, " ");
+  norm = norm.replace(/(?<![a-z0-9])[a-z0-9]+\.(com|net|org)(\/[^\s]*)?/g, " ");
   norm = norm.replace(/@[^\s]+/g, " ");
   norm = norm.replace(/#[^\s]+/g, " ");
 
@@ -386,8 +392,8 @@ function generateHeaderSection(data: ReportData): string[] {
 function generateVideoDetailsSection(data: ReportData): string[] {
   return [
     `## 🎥 Video Details`,
-    `- **Title:** ${data.videoTitle}`,
-    `- **Channel:** ${data.channelName}`,
+    `- **Title:** ${escapeMarkdown(data.videoTitle)}`,
+    `- **Channel:** ${escapeMarkdown(data.channelName)}`,
     `- **Views:** ${data.viewCount}`,
     `- **Likes:** ${data.likeCount}`,
     `- **Total Comments (API):** ${data.commentCount}`,
@@ -457,13 +463,13 @@ function generateTopCommentsSection(data: ReportData): string[] {
     `## 🌟 Top 5 Positive Comments`,
     ...data.topPositive.map(
       (c) =>
-        `- **${c.author}** (${c.like_count} likes): "${c.raw_text}" (Confidence: ${c.confidence_score}%)`,
+        `- **${escapeMarkdown(c.author)}** (${c.like_count} likes): "${escapeMarkdown(c.raw_text)}" (Confidence: ${c.confidence_score}%)`,
     ),
     ``,
     `## 🚨 Top 5 Negative Comments`,
     ...data.topNegative.map(
       (c) =>
-        `- **${c.author}** (${c.like_count} likes): "${c.raw_text}" (Confidence: ${c.confidence_score}%)`,
+        `- **${escapeMarkdown(c.author)}** (${c.like_count} likes): "${escapeMarkdown(c.raw_text)}" (Confidence: ${c.confidence_score}%)`,
     ),
     ``,
   ];

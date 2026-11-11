@@ -27,6 +27,10 @@ fi
 
 WRANGLER="bunx wrangler"
 
+# Install from the lockfile first so every wrangler call below uses the pinned version.
+echo "Installing dependencies..."
+bun install --frozen-lockfile
+
 # 2. Check if logged in
 if ! $WRANGLER whoami > /dev/null 2>&1; then
     echo "Error: Not logged into Cloudflare. Please run 'bunx wrangler login' first or set CLOUDFLARE_API_TOKEN."
@@ -34,9 +38,6 @@ if ! $WRANGLER whoami > /dev/null 2>&1; then
 fi
 
 echo "Environment validation passed."
-
-echo "Installing dependencies..."
-bun install
 
 echo "Deploying Cloudflare Worker (Backend API)..."
 ENV_FILE="$ROOT_DIR/.env"
@@ -55,6 +56,6 @@ fi
 $WRANGLER deploy "$WORKER_DIR/worker.ts" --config "$WORKER_DIR/wrangler.toml" --name rasalytics-api
 
 echo "Deploying Cloudflare Pages (Frontend)..."
-bunx wrangler@3 pages deploy "$WEB_DIR/public" --project-name rasalytics-web --branch master --commit-dirty=true
+$WRANGLER pages deploy "$WEB_DIR/public" --project-name rasalytics-web --branch master --commit-dirty=true
 
 echo "Deployment complete!"

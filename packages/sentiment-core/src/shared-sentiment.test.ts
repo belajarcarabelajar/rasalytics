@@ -1,5 +1,25 @@
 import { expect, test } from "bun:test";
-import { analyzeEdgeSafe } from "./shared-sentiment";
+import { analyzeEdgeSafe, preprocess } from "./shared-sentiment";
+
+// Quadratic matching needs over a billion steps for this input (seconds); linear matching
+// needs milliseconds. The bound sits between the two with room for a slow shared runner.
+const LONG_TOKEN_LIMIT_MS = 1000;
+
+test("preprocess handles a 50000 character token without a dot in linear time", () => {
+  const started = performance.now();
+  const { normalized, urls } = preprocess("a".repeat(50000));
+  const elapsed = performance.now() - started;
+
+  expect(urls).toEqual([]);
+  expect(normalized).toBe("a");
+  expect(elapsed).toBeLessThan(LONG_TOKEN_LIMIT_MS);
+});
+
+test("preprocess still strips a bare domain that follows a non-alphanumeric character", () => {
+  const { normalized, urls } = preprocess("cek foo-bar.com/x ok");
+  expect(urls).toEqual(["bar.com/x"]);
+  expect(normalized).toBe("cek foo ok");
+});
 
 test("analyzeEdgeSafe - empty or emoji only returns NEUTRAL", () => {
   const result = analyzeEdgeSafe("");
