@@ -1,6 +1,18 @@
 const WORKER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
   ? 'http://127.0.0.1:8787' 
-  : 'https://rasalytics-api.belajarcarabelajar.workers.dev';
+  : 'https://api-rasalytics.belajarcarabelajar.com';
+
+window.RasalyticsApiHelpers = {
+  apiErrorMessage: function(status, retryAfter, data) {
+    if (status === 429) {
+      const seconds = parseInt(retryAfter, 10);
+      return seconds > 0
+        ? `TOO MANY REQUESTS. TRY AGAIN IN ${seconds} SECONDS.`
+        : 'TOO MANY REQUESTS. TRY AGAIN LATER.';
+    }
+    return (data && data.error) || 'API REJECTED REQUEST';
+  }
+};
 
 // EXPORT HELPERS (Exposed for Testing)
 window.RasalyticsExportHelpers = {
@@ -157,9 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
         body: JSON.stringify(body)
       });
       const data = await response.json();
-      
+
       if (!response.ok) {
-        throw new Error(data.error || 'API REJECTED REQUEST');
+        throw new Error(window.RasalyticsApiHelpers.apiErrorMessage(
+          response.status, response.headers.get('Retry-After'), data));
       }
       
       await displayVideoResults(data);

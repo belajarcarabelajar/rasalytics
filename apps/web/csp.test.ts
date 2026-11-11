@@ -32,7 +32,10 @@ const required: Array<[string, string[]]> = [
   ["style-src", ["https://fonts.googleapis.com"]],
   ["font-src", ["'self'", "https://fonts.gstatic.com"]],
   ["script-src", ["https://static.cloudflareinsights.com"]],
-  ["connect-src", ["https://cloudflareinsights.com"]],
+  [
+    "connect-src",
+    ["https://cloudflareinsights.com", "https://api-rasalytics.belajarcarabelajar.com"],
+  ],
 ];
 
 describe("web Content-Security-Policy", () => {
